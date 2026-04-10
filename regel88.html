@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Regel-Zuordnung</title>
+    <style>
+        :root {
+            --primary-bg: #f0f4f8;
+            --card-bg: #ffffff;
+            --accent-blue: #2980b9;
+            --rule-1: #8e44ad;
+            --rule-234: #27ae60;
+            --rule-520: #e67e22;
+            --success: #2ecc71;
+            --error: #e74c3c;
+            --text-main: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 90%;
+            max-width: 800px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .instruction {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            line-height: 1.4;
+        }
+
+        .number-display {
+            background: #fdfdfd;
+            border: 4px dashed #ddd;
+            border-radius: 15px;
+            display: inline-block;
+            padding: 2rem 4rem;
+            margin-bottom: 2.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .current-number {
+            font-size: 4rem;
+            font-weight: bold;
+            color: var(--accent-blue);
+            display: block;
+        }
+
+        .number-in-words {
+            font-size: 1.5rem;
+            color: #7f8c8d;
+            margin-top: 0.5rem;
+            display: block;
+        }
+
+        .rules-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.2rem;
+        }
+
+        @media (min-width: 600px) {
+            .rules-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .rule-btn {
+            background: white;
+            border: 3px solid #eee;
+            padding: 1.5rem 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .rule-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            border-color: var(--accent-blue);
+        }
+
+        .rule-btn.rule-1-style { border-color: var(--rule-1); color: var(--rule-1); }
+        .rule-btn.rule-234-style { border-color: var(--rule-234); color: var(--rule-234); }
+        .rule-btn.rule-520-style { border-color: var(--rule-520); color: var(--rule-520); }
+
+        .rule-btn.correct {
+            background-color: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .rule-btn.wrong {
+            background-color: var(--error);
+            color: white;
+            border-color: var(--error);
+        }
+
+        #feedback {
+            margin-top: 2rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            min-height: 1.5rem;
+        }
+
+        .next-btn {
+            margin-top: 1.5rem;
+            background-color: var(--text-main);
+            color: white;
+            border: none;
+            padding: 1rem 3rem;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+            width: 100%;
+        }
+
+        @media (min-width: 600px) {
+            .next-btn { width: auto; }
+        }
+
+        #result-screen { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="quiz-area">
+        <div class="instruction">Welche Regel greift für diese Zahl?</div>
+        
+        <div class="number-display" id="number-box">
+            <span class="current-number" id="num-val">21</span>
+            <span class="number-in-words" id="num-words">двадцать один</span>
+        </div>
+
+        <div class="rules-grid">
+            <button class="rule-btn rule-1-style" onclick="handleChoice('1', this)">
+                „Endung auf 1“
+                <small style="font-weight: normal; margin-top: 5px;">(z. B. 1, 21, 31...)</small>
+            </button>
+            <button class="rule-btn rule-234-style" onclick="handleChoice('234', this)">
+                „Endung auf 2, 3, 4“
+                <small style="font-weight: normal; margin-top: 5px;">(z. B. 2, 3, 4, 22...)</small>
+            </button>
+            <button class="rule-btn rule-520-style" onclick="handleChoice('520', this)">
+                „5 bis 20“
+                <small style="font-weight: normal; margin-top: 5px;">(inkl. volle Zehner)</small>
+            </button>
+        </div>
+
+        <div id="feedback"></div>
+        <button class="next-btn" id="next-btn" onclick="goToNext()">Nächste Zahl</button>
+    </div>
+
+    <div id="result-screen">
+        <h2>Klassifizierung beendet!</h2>
+        <p id="final-result" style="font-size: 1.4rem;"></p>
+        <button class="next-btn" style="display:inline-block" onclick="location.reload()">Nochmal üben</button>
+    </div>
+</div>
+
+<script>
+    const dataset = [
+        { n: "1", w: "один", r: "1" },
+        { n: "4", w: "четыre", r: "234" },
+        { n: "11", w: "одиннадцать", r: "520" },
+        { n: "21", w: "двадцать один", r: "1" },
+        { n: "24", w: "двадцать четыре", r: "234" },
+        { n: "30", w: "тридцать", r: "520" },
+        { n: "13", w: "тринадцать", r: "520" },
+        { n: "42", w: "сорок два", r: "234" },
+        { n: "5", w: "пять", r: "520" },
+        { n: "101", w: "сто один", r: "1" },
+        { n: "12", w: "двенадцать", r: "520" },
+        { n: "2", w: "два", r: "234" }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    // Shuffle dataset
+    dataset.sort(() => Math.random() - 0.5);
+
+    function displayQuestion() {
+        answered = false;
+        const item = dataset[currentIdx];
+        document.getElementById("num-val").innerText = item.n;
+        document.getElementById("num-words").innerText = item.w;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("next-btn").style.display = "none";
+        document.getElementById("number-box").style.transform = "scale(1)";
+
+        const btns = document.querySelectorAll(".rule-btn");
+        btns.forEach(b => {
+            b.classList.remove("correct", "wrong");
+            b.disabled = false;
+        });
+    }
+
+    function handleChoice(choice, btn) {
+        if (answered) return;
+        answered = true;
+
+        const correctRule = dataset[currentIdx].r;
+        const btns = document.querySelectorAll(".rule-btn");
+        
+        btns.forEach(b => {
+            b.disabled = true;
+            // Map the choice to the correct button
+            if (b.innerText.includes("Endung auf 1") && correctRule === "1") b.classList.add("correct");
+            if (b.innerText.includes("Endung auf 2, 3, 4") && correctRule === "234") b.classList.add("correct");
+            if (b.innerText.includes("5 bis 20") && correctRule === "520") b.classList.add("correct");
+        });
+
+        if (choice === correctRule) {
+            score++;
+            document.getElementById("feedback").innerText = "Richtig!";
+            document.getElementById("feedback").style.color = "var(--success)";
+            document.getElementById("number-box").style.transform = "scale(1.05)";
+        } else {
+            btn.classList.add("wrong");
+            document.getElementById("feedback").innerText = "Leider falsch.";
+            document.getElementById("feedback").style.color = "var(--error)";
+        }
+
+        document.getElementById("next-btn").style.display = "inline-block";
+    }
+
+    function goToNext() {
+        currentIdx++;
+        if (currentIdx < dataset.length) {
+            displayQuestion();
+        } else {
+            document.getElementById("quiz-area").style.display = "none";
+            document.getElementById("result-screen").style.display = "block";
+            document.getElementById("final-result").innerText = score + " von " + dataset.length + " Zahlen korrekt zugeordnet.";
+        }
+    }
+
+    // Initial Start
+    displayQuestion();
+</script>
+
+</body>
+</html>
