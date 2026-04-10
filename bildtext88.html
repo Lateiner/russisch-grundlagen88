@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Bild-Text-Abgleich (10 Aufgaben)</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary: #4a69bd;
+            --secondary: #6a89cc;
+            --success: #2ecc71;
+            --error: #e74c3c;
+            --text: #2f3542;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 650px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .image-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #eee;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .visual-display {
+            font-size: 3.5rem;
+            display: block;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+
+        .quantity-badge {
+            background: var(--primary);
+            color: white;
+            padding: 5px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #dcdde1;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            position: relative;
+            width: 100%;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--secondary);
+            background-color: #f1f2f6;
+        }
+
+        .option-btn.correct {
+            border-color: var(--success);
+            background-color: #e8f8f0;
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .option-btn.wrong {
+            border-color: var(--error);
+            background-color: #fdeaea;
+            color: var(--error);
+        }
+
+        .feedback {
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 50px;
+            font-size: 1.1rem;
+            line-height: 1.4;
+        }
+
+        .next-btn {
+            margin-top: 15px;
+            background: var(--text);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .progress {
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #747d8c;
+            font-weight: bold;
+        }
+
+        @media (max-width: 480px) {
+            .option-btn { font-size: 1.1rem; padding: 12px; }
+            .visual-display { font-size: 2.5rem; }
+            .container { padding: 1.5rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="quiz-ui">
+        <div class="progress" id="progress">Frage 1 / 10</div>
+        
+        <div class="image-card">
+            <span class="visual-display" id="icon-display">🏛️</span>
+            <span class="quantity-badge" id="quantity-display">5</span>
+        </div>
+
+        <p style="margin-bottom: 20px;">Welche Phrase passt zum Bild?</p>
+
+        <div class="options-list" id="options-container"></div>
+
+        <div class="feedback" id="feedback"></div>
+        <button class="next-btn" id="next-btn" onclick="nextQuestion()">Nächste Aufgabe</button>
+    </div>
+
+    <div id="result-ui" style="display:none;">
+        <h2>Übung beendet!</h2>
+        <p id="score-text" style="font-size: 1.6rem; margin: 20px 0;"></p>
+        <button class="next-btn" style="display:inline-block" onclick="location.reload()">Nochmal starten</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        {
+            icons: "🏛️ (5)",
+            count: 5,
+            options: ["пять больших музеев", "пять большие музеи", "пять большого музея"],
+            correct: 0,
+            note: "Regel: Ab 5 steht alles im Genitiv Plural."
+        },
+        {
+            icons: "📖 (2)",
+            count: 2,
+            options: ["две интересных книги", "две интересные книги", "две интересная книга"],
+            correct: 1,
+            note: "Regel: Weiblich nach 2, 3, 4 -> Adjektiv im Nominativ Plural."
+        },
+        {
+            icons: "👨‍🏫 (1)",
+            count: 1,
+            options: ["один интересный урок", "один интересных урока", "один интересные уроки"],
+            correct: 0,
+            note: "Regel: Nach 'eins' steht alles im Nominativ Singular."
+        },
+        {
+            icons: "🏠 (21)",
+            count: 21,
+            options: ["двадцать один новых домов", "двадцать один новые дома", "двадцать один новый дом"],
+            correct: 2,
+            note: "Regel: Endet die Zahl auf 'один', folgt der Nominativ Singular."
+        },
+        {
+            icons: "📝 (3)",
+            count: 3,
+            options: ["три полезных задания", "три полезные задания", "три полезных заданий"],
+            correct: 0,
+            note: "Regel: Sächlich nach 2, 3, 4 -> Adjektiv im Genitiv Plural, Substantiv im Genitiv Singular."
+        },
+        {
+            icons: "👩‍🦰 (4)",
+            count: 4,
+            options: ["четыре лучших подруг", "четыре лучшие подруги", "четыре лучших подруги"],
+            correct: 1,
+            note: "Regel: Weiblich nach 4 -> Adjektiv im Nominativ Plural."
+        },
+        {
+            icons: "🛣️ (11)",
+            count: 11,
+            options: ["одиннадцать широкая улица", "одиннадцать широкие улицы", "одиннадцать широких улиц"],
+            correct: 2,
+            note: "Achtung: 11 gehört zur Gruppe 5-20 -> Genitiv Plural!"
+        },
+        {
+            icons: "💬 (2)",
+            count: 2,
+            options: ["два новых слова", "два новые слова", "два новых слов"],
+            correct: 0,
+            note: "Regel: Sächlich nach 2 -> Adjektiv im Genitiv Plural."
+        },
+        {
+            icons: "📝 (1)",
+            count: 1,
+            options: ["одно интересное задание", "один интересное задание", "одно интересных задания"],
+            correct: 0,
+            note: "Regel: Sächlich nach 'одно' -> Nominativ Singular."
+        },
+        {
+            icons: "🎓 (25)",
+            count: 25,
+            options: ["двадцать пять умные студенты", "двадцать fünf умных студентов", "двадцать пять умных студентов"],
+            correct: 2,
+            note: "Regel: Endet die Zahl auf 5 -> Genitiv Plural für alles."
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    function loadQuestion() {
+        answered = false;
+        const q = questions[currentIdx];
+        document.getElementById("icon-display").innerText = q.icons.split(' ')[0];
+        document.getElementById("quantity-display").innerText = q.count;
+        document.getElementById("progress").innerText = `Aufgabe ${currentIdx + 1} von ${questions.length}`;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("next-btn").style.display = "none";
+
+        const container = document.getElementById("options-container");
+        container.innerHTML = "";
+
+        q.options.forEach((text, index) => {
+            const btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.innerText = text;
+            btn.onclick = () => checkAnswer(index, btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(index, btn) {
+        if (answered) return;
+        answered = true;
+
+        const q = questions[currentIdx];
+        const buttons = document.querySelectorAll(".option-btn");
+
+        if (index === q.correct) {
+            score++;
+            btn.classList.add("correct");
+            document.getElementById("feedback").innerHTML = "<span style='color:var(--success)'>Richtig!</span><br>" + q.note;
+        } else {
+            btn.classList.add("wrong");
+            buttons[q.correct].classList.add("correct");
+            document.getElementById("feedback").innerHTML = "<span style='color:var(--error)'>Nicht ganz korrekt.</span><br>" + q.note;
+        }
+
+        buttons.forEach(b => b.disabled = true);
+        document.getElementById("next-btn").style.display = "inline-block";
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            loadQuestion();
+        } else {
+            document.getElementById("quiz-ui").style.display = "none";
+            document.getElementById("result-ui").style.display = "block";
+            document.getElementById("score-text").innerText = `${score} von ${questions.length} Aufgaben richtig gelöst!`;
+        }
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
