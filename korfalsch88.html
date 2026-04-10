@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Russisch-Übung: Korrekt oder Falsch?</title>
+    <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --card-white: #ffffff;
+            --correct-green: #2ecc71;
+            --wrong-red: #e74c3c;
+            --text-dark: #2c3e50;
+            --gray: #95a5a6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0;
+            overflow: hidden; /* Verhindert Scrollen beim Swipen */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .header {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .instruction {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+
+        /* Swipe Area */
+        .swipe-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+            touch-action: none;
+        }
+
+        .card {
+            position: absolute;
+            width: 85%;
+            height: 300px;
+            background: var(--card-white);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.1s ease-out;
+            border: 1px solid #eee;
+        }
+
+        .card:active {
+            cursor: grabbing;
+        }
+
+        /* Feedback-Indikatoren auf der Karte */
+        .stamp {
+            position: absolute;
+            top: 20px;
+            padding: 5px 15px;
+            border: 4px solid;
+            border-radius: 10px;
+            text-transform: uppercase;
+            font-size: 1.5rem;
+            opacity: 0;
+            transform: rotate(-15deg);
+        }
+
+        .stamp-correct {
+            right: 20px;
+            color: var(--correct-green);
+            border-color: var(--correct-green);
+        }
+
+        .stamp-wrong {
+            left: 20px;
+            color: var(--wrong-red);
+            border-color: var(--wrong-red);
+        }
+
+        /* Steuerungs-Buttons für Desktop */
+        .controls {
+            padding: 30px;
+            display: flex;
+            gap: 40px;
+        }
+
+        .btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn:active { transform: scale(0.9); }
+        .btn-wrong { background-color: var(--wrong-red); }
+        .btn-correct { background-color: var(--correct-green); }
+
+        .score-display {
+            position: absolute;
+            bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        #result-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="font-weight: bold; font-size: 1.2rem;">Richtig oder Falsch?</div>
+    <div class="instruction">Swipe nach rechts (Richtig) oder links (Falsch)</div>
+</div>
+
+<div class="swipe-container" id="swipe-area">
+    <!-- Die aktuelle Karte -->
+    <div class="card" id="active-card">
+        <div class="stamp stamp-correct" id="stamp-r">Richtig</div>
+        <div class="stamp stamp-wrong" id="stamp-f">Falsch</div>
+        <span id="phrase-text">Lade Übung...</span>
+    </div>
+</div>
+
+<div class="controls">
+    <button class="btn btn-wrong" onclick="animateSwipe('left')">✕</button>
+    <button class="btn btn-correct" onclick="animateSwipe('right')">✓</button>
+</div>
+
+<div class="score-display" id="score-text">Frage 1 / 10</div>
+
+<div id="result-overlay">
+    <h2>Übung beendet!</h2>
+    <div id="final-stats" style="font-size: 1.5rem; margin-bottom: 20px;"></div>
+    <button onclick="location.reload()" style="padding: 10px 20px; cursor: pointer;">Nochmal spielen</button>
+</div>
+
+<script>
+    const questions = [
+        { text: "один интересный урок", isCorrect: true },
+        { text: "одна интересных книга", isCorrect: false },
+        { text: "два интересных урока", isCorrect: true },
+        { text: "две интересные книги", isCorrect: true },
+        { text: "две интересных книги", isCorrect: false },
+        { text: "пять интересных уроков", isCorrect: true },
+        { text: "пять интересные уроки", isCorrect: false },
+        { text: "двадцать один новый дом", isCorrect: true },
+        { text: "двадцать два новые дома", isCorrect: false },
+        { text: "три лучшие подруги", isCorrect: true }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let isAnimating = false;
+
+    // Swipe Logik Variablen
+    let startX = 0;
+    let currentX = 0;
+    const card = document.getElementById('active-card');
+    const phraseDisplay = document.getElementById('phrase-text');
+    const stampR = document.getElementById('stamp-r');
+    const stampF = document.getElementById('stamp-f');
+
+    function initCard() {
+        if(currentIdx >= questions.length) {
+            showResults();
+            return;
+        }
+        card.style.transition = 'none';
+        card.style.transform = 'translateX(0) rotate(0)';
+        stampR.style.opacity = 0;
+        stampF.style.opacity = 0;
+        phraseDisplay.innerText = questions[currentIdx].text;
+        document.getElementById('score-text').innerText = `Frage ${currentIdx + 1} / ${questions.length}`;
+        isAnimating = false;
+    }
+
+    // Event Listener für Touch & Maus
+    card.addEventListener('touchstart', dragStart);
+    card.addEventListener('touchmove', dragMove);
+    card.addEventListener('touchend', dragEnd);
+
+    card.addEventListener('mousedown', dragStart);
+    window.addEventListener('mousemove', dragMove);
+    window.addEventListener('mouseup', dragEnd);
+
+    function dragStart(e) {
+        if(isAnimating) return;
+        startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        card.style.transition = 'none';
+    }
+
+    function dragMove(e) {
+        if(isAnimating || startX === 0) return;
+        currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const xDiff = currentX - startX;
+        const rotation = xDiff / 10;
+        
+        card.style.transform = `translateX(${xDiff}px) rotate(${rotation}deg)`;
+
+        // Stempel einblenden
+        if(xDiff > 50) {
+            stampR.style.opacity = Math.min(xDiff / 150, 1);
+            stampF.style.opacity = 0;
+        } else if(xDiff < -50) {
+            stampF.style.opacity = Math.min(Math.abs(xDiff) / 150, 1);
+            stampR.style.opacity = 0;
+        } else {
+            stampR.style.opacity = 0;
+            stampF.style.opacity = 0;
+        }
+    }
+
+    function dragEnd() {
+        if(isAnimating || startX === 0) return;
+        const xDiff = currentX - startX;
+        startX = 0;
+
+        if(xDiff > 120) {
+            handleAnswer(true); // Rechts = Richtig
+        } else if(xDiff < -120) {
+            handleAnswer(false); // Links = Falsch
+        } else {
+            // Zurück zur Mitte
+            card.style.transition = 'transform 0.3s ease';
+            card.style.transform = 'translateX(0) rotate(0)';
+            stampR.style.opacity = 0;
+            stampF.style.opacity = 0;
+        }
+    }
+
+    function handleAnswer(userGuessCorrect) {
+        isAnimating = true;
+        const actualCorrect = questions[currentIdx].isCorrect;
+        
+        if(userGuessCorrect === actualCorrect) {
+            score++;
+        }
+
+        const direction = userGuessCorrect ? 1000 : -1000;
+        card.style.transition = 'transform 0.5s ease-in';
+        card.style.transform = `translateX(${direction}px) rotate(${direction/20}deg)`;
+
+        setTimeout(() => {
+            currentIdx++;
+            initCard();
+        }, 500);
+    }
+
+    // Button Steuerung
+    function animateSwipe(dir) {
+        if(isAnimating) return;
+        handleAnswer(dir === 'right');
+    }
+
+    function showResults() {
+        document.getElementById('result-overlay').style.display = 'flex';
+        document.getElementById('final-stats').innerText = `${score} von ${questions.length} richtig`;
+    }
+
+    initCard();
+</script>
+
+</body>
+</html>
