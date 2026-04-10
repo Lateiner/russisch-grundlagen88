@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Endungs-Picker</title>
+    <style>
+        :root {
+            --primary-color: #34495e;
+            --accent-color: #f39c12;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #ecf0f1;
+            --text-color: #2c3e50;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 700px;
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .instruction {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .sentence-display {
+            font-size: 1.8rem;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #f9f9f9;
+            border-radius: 10px;
+            line-height: 1.6;
+        }
+
+        .fragment-part {
+            border-bottom: 3px solid var(--accent-color);
+            padding-bottom: 2px;
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        @media (min-width: 500px) {
+            .options-container {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 1rem;
+            font-size: 1.4rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-color);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            background: #fffdf9;
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color) !important;
+            border-color: var(--success-color) !important;
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color) !important;
+            border-color: var(--error-color) !important;
+            color: white;
+        }
+
+        .feedback-area {
+            margin-top: 2rem;
+            min-height: 3rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .next-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            display: none;
+            margin: 0 auto;
+        }
+
+        .next-btn:hover {
+            opacity: 0.9;
+        }
+
+        #result-screen {
+            display: none;
+        }
+
+        .highlight-correct {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="quiz-area">
+        <div class="instruction">Wähle die richtige Adjektivendung:</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+
+        <div class="sentence-display" id="sentence">
+            <!-- Beispiel: два интересн... урока -->
+            <span id="prefix"></span><span class="fragment-part">...</span> <span id="suffix"></span>
+        </div>
+
+        <div class="options-container" id="options">
+            <!-- Buttons werden hier eingefügt -->
+        </div>
+
+        <div class="feedback-area" id="feedback"></div>
+        <button class="next-btn" id="next-btn" onclick="nextQuestion()">Nächste Frage</button>
+    </div>
+
+    <div id="result-screen">
+        <h2>Übung beendet!</h2>
+        <p id="final-score" style="font-size: 1.3rem;"></p>
+        <button class="next-btn" style="display:block" onclick="location.reload()">Nochmal starten</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        { pre: "два интересн", post: "урока", correct: "ых", options: ["ых", "ые", "ый"], hint: "Männlich nach 2, 3, 4: Genitiv Plural." },
+        { pre: "две интересн", post: "книги", correct: "ые", options: ["ых", "ые", "ая"], hint: "Weiblich nach 2, 3, 4: Nominativ Plural." },
+        { pre: "одна интересн", post: "книга", correct: "ая", options: ["ая", "ые", "ой"], hint: "Nach 'eins' steht alles im Nominativ Singular." },
+        { pre: "пять интересн", post: "заданий", correct: "ых", options: ["ых", "ые", "ое"], hint: "Nach 5-20 steht alles im Genitiv Plural." },
+        { pre: "три лучш", post: "подруги", correct: "ие", options: ["их", "ие", "ая"], hint: "Weiblich nach 3: Nominativ Plural." },
+        { pre: "двадцать один нов", post: "дом", correct: "ый", options: ["ый", "ых", "ые"], hint: "Endung auf 1: Nominativ Singular." },
+        { pre: "четыре длинн", post: "статьи", correct: "ые", options: ["ых", "ые", "ую"], hint: "Weiblich nach 4: Nominativ Plural." },
+        { pre: "шесть коротк", post: "заданий", correct: "их", options: ["их", "ие", "их"], hint: "Sächlich nach 6: Genitiv Plural." }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    function loadQuestion() {
+        answered = false;
+        const data = quizData[currentIdx];
+        document.getElementById("prefix").innerText = data.pre;
+        document.getElementById("suffix").innerText = data.post;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("next-btn").style.display = "none";
+        
+        // Progress
+        const progress = ((currentIdx) / quizData.length) * 100;
+        document.getElementById("progress-fill").style.width = progress + "%";
+
+        // Options
+        const optionsContainer = document.getElementById("options");
+        optionsContainer.innerHTML = "";
+        
+        // Shuffle options a bit
+        const shuffledOptions = [...data.options].sort(() => Math.random() - 0.5);
+        
+        shuffledOptions.forEach(opt => {
+            const btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(opt, btn);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selected, btn) {
+        if (answered) return;
+        answered = true;
+
+        const data = quizData[currentIdx];
+        const allButtons = document.querySelectorAll(".option-btn");
+        
+        allButtons.forEach(b => {
+            b.disabled = true;
+            if (b.innerText === data.correct) {
+                b.classList.add("correct");
+            }
+        });
+
+        if (selected === data.correct) {
+            score++;
+            document.getElementById("feedback").innerHTML = "<span style='color:var(--success-color)'>Richtig!</span><br><small>" + data.hint + "</small>";
+            // Update sentence display
+            document.querySelector(".fragment-part").innerText = selected;
+            document.querySelector(".fragment-part").classList.add("highlight-correct");
+        } else {
+            btn.classList.add("wrong");
+            document.getElementById("feedback").innerHTML = "<span style='color:var(--error-color)'>Falsch.</span><br><small>" + data.hint + "</small>";
+        }
+
+        document.getElementById("next-btn").style.display = "block";
+    }
+
+    function nextQuestion() {
+        // Reset styles for text
+        document.querySelector(".fragment-part").innerText = "...";
+        document.querySelector(".fragment-part").classList.remove("highlight-correct");
+
+        currentIdx++;
+        if (currentIdx < quizData.length) {
+            loadQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        document.getElementById("progress-fill").style.width = "100%";
+        document.getElementById("quiz-area").style.display = "none";
+        document.getElementById("result-screen").style.display = "block";
+        document.getElementById("final-score").innerText = "Ergebnis: " + score + " von " + quizData.length + " richtig.";
+    }
+
+    // Start
+    loadQuestion();
+</script>
+
+</body>
+</html>
