@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Das passende Zahlwort</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f4f7f6;
+            --text-color: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 1.5rem;
+        }
+
+        .exercise-card {
+            background: #fff;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .image-display {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .russian-word {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            display: block;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        /* Responsive Anpassung für größere Bildschirme */
+        @media (min-width: 480px) {
+            .options-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .option-btn {
+            background-color: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 1rem;
+            font-size: 1.2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .option-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+        }
+
+        #feedback {
+            margin-top: 1.5rem;
+            font-weight: bold;
+            min-height: 1.5rem;
+        }
+
+        .next-btn {
+            margin-top: 2rem;
+            background-color: var(--text-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .next-btn:hover {
+            opacity: 0.9;
+        }
+
+        .result-screen {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="quiz-area">
+        <h1>Wähle das passende Zahlwort</h1>
+        <div class="progress" id="progress">Frage 1 von 5</div>
+
+        <div class="exercise-card">
+            <span class="image-display" id="image-placeholder">📖</span>
+            <span class="russian-word" id="word-placeholder">книга</span>
+        </div>
+
+        <div class="options-grid">
+            <button class="option-btn" onclick="checkAnswer('один')">один</button>
+            <button class="option-btn" onclick="checkAnswer('одна')">одна</button>
+            <button class="option-btn" onclick="checkAnswer('одно')">одно</button>
+        </div>
+
+        <div id="feedback"></div>
+        <button class="next-btn" id="next-btn" onclick="nextQuestion()">Nächste Frage</button>
+    </div>
+
+    <div id="result-screen" class="result-screen">
+        <h1>Ergebnis</h1>
+        <p id="final-score"></p>
+        <button class="next-btn" style="display:inline-block" onclick="resetQuiz()">Nochmal üben</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        { word: "книга", correct: "одна", icon: "📖" },
+        { word: "урок", correct: "один", icon: "👨‍🏫" },
+        { word: "задание", correct: "одно", icon: "📝" },
+        { word: "дом", correct: "один", icon: "🏠" },
+        { word: "улица", correct: "одна", icon: "🛣️" },
+        { word: "здание", correct: "одно", icon: "🏢" },
+        { word: "друг", correct: "один", icon: "🤝" },
+        { word: "музей", correct: "один", icon: "🏛️" }
+    ];
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let answered = false;
+
+    function loadQuestion() {
+        answered = false;
+        const q = questions[currentQuestionIndex];
+        document.getElementById("word-placeholder").innerText = q.word;
+        document.getElementById("image-placeholder").innerText = q.icon;
+        document.getElementById("progress").innerText = "Frage " + (currentQuestionIndex + 1) + " von " + questions.length;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("next-btn").style.display = "none";
+        
+        const buttons = document.querySelectorAll(".option-btn");
+        buttons.forEach(btn => {
+            btn.classList.remove("correct", "wrong");
+            btn.disabled = false;
+        });
+    }
+
+    function checkAnswer(selected) {
+        if(answered) return;
+        answered = true;
+
+        const correct = questions[currentQuestionIndex].correct;
+        const buttons = document.querySelectorAll(".option-btn");
+        
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            if(btn.innerText === correct) {
+                btn.classList.add("correct");
+            }
+            if(btn.innerText === selected && selected !== correct) {
+                btn.classList.add("wrong");
+            }
+        });
+
+        if(selected === correct) {
+            score++;
+            document.getElementById("feedback").innerText = "Richtig!";
+            document.getElementById("feedback").style.color = "var(--success-color)";
+        } else {
+            document.getElementById("feedback").innerText = "Leider falsch.";
+            document.getElementById("feedback").style.color = "var(--error-color)";
+        }
+
+        document.getElementById("next-btn").style.display = "inline-block";
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if(currentQuestionIndex < questions.length) {
+            loadQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        document.getElementById("quiz-area").style.display = "none";
+        document.getElementById("result-screen").style.display = "block";
+        document.getElementById("final-score").innerText = "Du hast " + score + " von " + questions.length + " Fragen richtig beantwortet.";
+    }
+
+    function resetQuiz() {
+        score = 0;
+        currentQuestionIndex = 0;
+        document.getElementById("quiz-area").style.display = "block";
+        document.getElementById("result-screen").style.display = "none";
+        loadQuestion();
+    }
+
+    // Quiz beim Laden starten
+    loadQuestion();
+</script>
+
+</body>
+</html>
