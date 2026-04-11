@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Das Kuckucksei (8 Aufgaben)</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary-blue: #3498db;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --text-main: #2c3e50;
+            --text-muted: #7f8c8d;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress {
+            font-weight: bold;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        h1 { font-size: 1.5rem; margin-bottom: 5px; }
+        .instruction { color: var(--text-muted); margin-bottom: 25px; line-height: 1.4; }
+
+        .egg-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .egg-btn {
+            background: #fff;
+            border: 2px solid #edf2f7;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .egg-btn:hover:not(:disabled) {
+            border-color: var(--primary-blue);
+            background-color: #f0f7ff;
+        }
+
+        .egg-btn.correct {
+            border-color: var(--success-green);
+            background-color: #e8f8f0;
+            color: var(--success-green);
+            font-weight: bold;
+        }
+
+        .egg-btn.wrong {
+            border-color: var(--error-red);
+            background-color: #fdeaea;
+            color: var(--error-red);
+        }
+
+        .feedback-box {
+            min-height: 80px;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1rem;
+            line-height: 1.5;
+            display: none;
+            text-align: left;
+        }
+
+        .btn-next {
+            background: var(--text-main);
+            color: white;
+            border: none;
+            padding: 12px 35px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 480px) {
+            .egg-btn { font-size: 1rem; padding: 12px; }
+            .container { padding: 1.5rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-ui">
+    <div class="progress" id="progress-text">Aufgabe 1 / 8</div>
+    <h1>Das Kuckucksei</h1>
+    <p class="instruction">Welcher Ausdruck folgt einer <b>anderen Regel</b> als die restlichen vier?</p>
+
+    <div class="egg-list" id="egg-container"></div>
+
+    <div class="feedback-box" id="feedback-box"></div>
+    <button class="btn-next" id="next-btn" onclick="nextLevel()">Nächste Aufgabe</button>
+</div>
+
+<div class="container" id="result-ui" style="display:none;">
+    <h1>Hervorragend!</h1>
+    <p id="final-stats" style="font-size: 1.3rem; margin: 20px 0;"></p>
+    <button class="btn-next" style="display:block" onclick="location.reload()">Neustart</button>
+</div>
+
+<script>
+    const levels = [
+        {
+            options: ["один хороший друг", "одна интересная книга", "одно полезное слово", "двадцать один новый дом", "пять больших музеев"],
+            correctIndex: 4,
+            logic: "Die ersten vier folgen der Regel für '1' (Nominativ Singular). 'пять больших музеев' folgt der Regel 5-20 (Genitiv Plural)."
+        },
+        {
+            options: ["два интересных урока", "три полезных слова", "четыре новых музея", "два старых здания", "две интересные книги"],
+            correctIndex: 4,
+            logic: "Die ersten vier sind männlich/sächlich nach 2, 3, 4 (Adjektiv im Genitiv Plural). Bei 'две интересные книги' (weiblich) steht das Adjektiv im Nominativ Plural."
+        },
+        {
+            options: ["пять новых заданий", "восемь больших музеев", "двадцать пять умных студентов", "сорок шесть длинных путей", "двадцать одна новая подруga"],
+            correctIndex: 4,
+            logic: "Die ersten vier folgen der Regel 5-20 (Genitiv Plural). 'двадцать одна новая подруга' endet auf 1 und folgt daher der Regel Nominativ Singular."
+        },
+        {
+            options: ["три лучшие подруги", "две новые статьи", "четыре современные библиотеки", "две интересные книги", "два интересных урока"],
+            correctIndex: 4,
+            logic: "Die ersten vier sind weiblich nach 2, 3, 4 (Adjektiv im Nominativ Plural). 'два интересных урока' ist männlich (Adjektiv im Genitiv Plural)."
+        },
+        {
+            options: ["один хороший друг", "двадцать один новый музей", "тридцать одна новая машина", "сто один полезный совет", "одиннадцать широких улиц"],
+            correctIndex: 4,
+            logic: "Achtung! Die ersten vier enden auf 1 (Nominativ Singular). 'одиннадцать' (11) gehört aber zur Gruppe 5-20 und verlangt Genitiv Plural."
+        },
+        {
+            options: ["два новых слова", "три полезных задания", "четыре красивых окна", "два интересных упражнения", "пять полезных упражнений"],
+            correctIndex: 4,
+            logic: "Die ersten vier sind sächlich nach 2, 3, 4 (Substantiv im Genitiv Singular). Bei 'пять...' steht das Substantiv im Genitiv Plural."
+        },
+        {
+            options: ["тридцать один новый дом", "сорок один большой музей", "пятьдесят один длинный путь", "сто один старый мост", "двадцать четыре новые машины"],
+            correctIndex: 4,
+            logic: "Die ersten vier enden auf 1 (Nominativ Singular). 'двадцать четыре...' endet auf 4 und folgt der Regel für das weibliche Geschlecht (Nominativ Plural)."
+        },
+        {
+            options: ["шесть новых окон", "десять длинных статей", "пятнадцать умных студентов", "двадцать полезных советов", "четыре полезных совета"],
+            correctIndex: 4,
+            logic: "Die ersten vier folgen der Regel 5-20 (Substantiv im Genitiv Plural). Bei 'четыre полезных совета' (Regel 4) steht das Substantiv im Genitiv Singular."
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    function loadLevel() {
+        answered = false;
+        const level = levels[currentIdx];
+        document.getElementById("progress-text").innerText = `Aufgabe ${currentIdx + 1} / ${levels.length}`;
+        document.getElementById("feedback-box").style.display = "none";
+        document.getElementById("next-btn").style.display = "none";
+
+        const container = document.getElementById("egg-container");
+        container.innerHTML = "";
+
+        level.options.forEach((text, index) => {
+            const btn = document.createElement("button");
+            btn.className = "egg-btn";
+            btn.innerHTML = `<span>${text}</span>`;
+            btn.onclick = () => checkEgg(index, btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkEgg(index, btn) {
+        if (answered) return;
+        answered = true;
+
+        const level = levels[currentIdx];
+        const buttons = document.querySelectorAll(".egg-btn");
+        const feedbackBox = document.getElementById("feedback-box");
+
+        if (index === level.correctIndex) {
+            score++;
+            btn.classList.add("correct");
+            feedbackBox.style.backgroundColor = "#e8f8f0";
+            feedbackBox.innerHTML = `<b style="color:var(--success-green)">Richtig!</b><br>${level.logic}`;
+        } else {
+            btn.classList.add("wrong");
+            buttons[level.correctIndex].classList.add("correct");
+            feedbackBox.style.backgroundColor = "#fdeaea";
+            feedbackBox.innerHTML = `<b style="color:var(--error-red)">Nicht ganz.</b><br>${level.logic}`;
+        }
+
+        feedbackBox.style.display = "block";
+        buttons.forEach(b => b.disabled = true);
+        document.getElementById("next-btn").style.display = "block";
+    }
+
+    function nextLevel() {
+        currentIdx++;
+        if (currentIdx < levels.length) {
+            loadLevel();
+        } else {
+            document.getElementById("quiz-ui").style.display = "none";
+            document.getElementById("result-ui").style.display = "block";
+            document.getElementById("final-stats").innerText = `Du hast ${score} von ${levels.length} Kuckuckseiern entlarvt!`;
+        }
+    }
+
+    loadLevel();
+</script>
+
+</body>
+</html>
