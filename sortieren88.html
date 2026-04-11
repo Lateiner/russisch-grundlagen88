@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: 10 Aufgaben Zahlen-Sortierung</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --purple: #8e44ad;
+            --bg: #f4f7f6;
+            --text: #2c3e50;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress {
+            font-weight: bold;
+            color: #95a5a6;
+            margin-bottom: 10px;
+        }
+
+        h1 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+        .instruction { color: #7f8c8d; margin-bottom: 1.5rem; font-size: 0.95rem; }
+
+        .sortable-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .sort-item {
+            background: #fff;
+            border: 2px solid #ddd;
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: 0.3s;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .sort-item.correct { border-color: var(--success); background-color: #e8f8f0; }
+        .sort-item.wrong { border-color: var(--error); background-color: #fdeaea; }
+
+        .move-btns {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-move {
+            background: #eee;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .btn-move:disabled { opacity: 0.2; cursor: not-allowed; }
+
+        .feedback { min-height: 60px; margin-bottom: 1rem; font-weight: bold; line-height: 1.4; }
+
+        .controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .btn-check { background: var(--primary); color: white; }
+        .btn-sol { background: var(--purple); color: white; }
+        .btn-next { background: var(--text); color: white; display: none; }
+        .btn-restart { background: #95a5a6; color: white; display: none; }
+
+        @media (max-width: 480px) {
+            .sort-item { font-size: 1rem; padding: 10px; }
+            .container { padding: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-screen">
+    <div class="progress" id="progress-text">Aufgabe 1 / 10</div>
+    <h1>Zahlen-Sortierung</h1>
+    <p class="instruction">Bringe die Phrasen in die richtige Reihenfolge (aufsteigend nach Anzahl).</p>
+
+    <div class="sortable-list" id="sort-list"></div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="controls">
+        <button class="btn btn-sol" id="btn-sol" onclick="showSolution()">Lösung</button>
+        <button class="btn btn-check" id="btn-check" onclick="checkOrder()">Prüfen</button>
+        <button class="btn btn-next" id="btn-next" onclick="nextLevel()">Weiter</button>
+        <button class="btn btn-restart" id="btn-restart" onclick="resetGame()">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const levels = [
+        { items: [{t: "одно слово", v: 1}, {t: "два слова", v: 2}, {t: "пять слов", v: 5}] },
+        { items: [{t: "один друг", v: 1}, {t: "три друга", v: 3}, {t: "десять друзей", v: 10}] },
+        { items: [{t: "одна книга", v: 1}, {t: "две книги", v: 2}, {t: "семь книг", v: 7}] },
+        { items: [{t: "одно задание", v: 1}, {t: "четыре задания", v: 4}, {t: "одиннадцать заданий", v: 11}] },
+        { items: [{t: "один новый дом", v: 1}, {t: "два новых дома", v: 2}, {t: "пять новых домов", v: 5}] },
+        { items: [{t: "две интересные книги", v: 2}, {t: "четыре интересные книги", v: 4}, {t: "двадцать книг", v: 20}] },
+        { items: [{t: "три хорошие подруги", v: 3}, {t: "пять хороших подруг", v: 5}, {t: "двадцать одна подруга", v: 21}] },
+        { items: [{t: "четыре длинные статьи", v: 4}, {t: "девять длинных статей", v: 9}, {t: "сорок одна статья", v: 41}] },
+        { items: [{t: "два полезных слова", v: 2}, {t: "пять полезных слов", v: 5}, {t: "одиннадцать полезных слов", v: 11}] },
+        { items: [{t: "один музей", v: 1}, {t: "четыре музея", v: 4}, {t: "двенадцать музеев", v: 12}, {t: "двадцать один музей", v: 21}] }
+    ];
+
+    let currentLevel = 0;
+    let currentOrder = [];
+
+    function init() {
+        const level = levels[currentLevel];
+        document.getElementById("progress-text").innerText = `Aufgabe ${currentLevel + 1} / ${levels.length}`;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("btn-next").style.display = "none";
+        document.getElementById("btn-check").style.display = "inline-block";
+        document.getElementById("btn-sol").style.display = "inline-block";
+        document.getElementById("btn-restart").style.display = "none";
+        
+        // Mischen
+        currentOrder = [...level.items].sort(() => Math.random() - 0.5);
+        render();
+    }
+
+    function render() {
+        const list = document.getElementById("sort-list");
+        list.innerHTML = "";
+        currentOrder.forEach((item, i) => {
+            const div = document.createElement("div");
+            div.className = "sort-item";
+            div.innerHTML = `
+                <span>${item.t}</span>
+                <div class="move-btns">
+                    <button class="btn-move" onclick="move(${i}, -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+                    <button class="btn-move" onclick="move(${i}, 1)" ${i === currentOrder.length - 1 ? 'disabled' : ''}>▼</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function move(index, dir) {
+        const target = index + dir;
+        const temp = currentOrder[index];
+        currentOrder[index] = currentOrder[target];
+        currentOrder[target] = temp;
+        render();
+        document.getElementById("feedback").innerText = "";
+    }
+
+    function checkOrder() {
+        const isCorrect = currentOrder.every((item, i) => i === 0 || item.v >= currentOrder[i - 1].v);
+        const items = document.querySelectorAll(".sort-item");
+        
+        if (isCorrect) {
+            items.forEach(el => el.classList.add("correct"));
+            document.getElementById("feedback").innerHTML = "<span style='color:var(--success)'>Richtig! Die Zahlenwerte steigen korrekt an.</span>";
+            document.getElementById("btn-check").style.display = "none";
+            document.getElementById("btn-sol").style.display = "none";
+            document.getElementById("btn-next").style.display = "inline-block";
+        } else {
+            items.forEach(el => el.classList.add("wrong"));
+            document.getElementById("feedback").innerHTML = "<span style='color:var(--error)'>Noch nicht ganz richtig. Sortiere nach der Anzahl!</span>";
+            setTimeout(() => items.forEach(el => el.classList.remove("wrong")), 800);
+        }
+    }
+
+    function showSolution() {
+        currentOrder.sort((a, b) => a.v - b.v);
+        render();
+        const items = document.querySelectorAll(".sort-item");
+        items.forEach(el => el.classList.add("correct"));
+        document.getElementById("feedback").innerHTML = "<span style='color:var(--purple)'>Lösung angezeigt.</span>";
+        document.getElementById("btn-check").style.display = "none";
+        document.getElementById("btn-sol").style.display = "none";
+        document.getElementById("btn-next").style.display = "inline-block";
+    }
+
+    function nextLevel() {
+        currentLevel++;
+        if (currentLevel < levels.length) {
+            init();
+        } else {
+            document.getElementById("sort-list").innerHTML = "";
+            document.getElementById("feedback").innerHTML = "<h2>Hervorragend!</h2><p>Alle 10 Sortieraufgaben wurden erfolgreich gelöst.</p>";
+            document.getElementById("btn-next").style.display = "none";
+            document.getElementById("btn-restart").style.display = "inline-block";
+        }
+    }
+
+    function resetGame() {
+        currentLevel = 0;
+        init();
+    }
+
+    init();
+</script>
+
+</body>
+</html>
