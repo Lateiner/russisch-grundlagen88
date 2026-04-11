@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Wort-Duo-Check</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --container-bg: #ffffff;
+            --primary-blue: #3498db;
+            --secondary-blue: #2980b9;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --text-dark: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--container-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress {
+            font-weight: bold;
+            color: #95a5a6;
+            margin-bottom: 1rem;
+        }
+
+        .duo-display {
+            font-size: 1.8rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background-color: #f1f4f6;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .gap {
+            border-bottom: 3px solid var(--primary-blue);
+            min-width: 120px;
+            color: var(--primary-blue);
+            font-weight: bold;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 2rem;
+        }
+
+        @media (min-width: 480px) {
+            .options-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .option-btn {
+            background-color: white;
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
+            padding: 12px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-green);
+            border-color: var(--success-green);
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-red);
+            border-color: var(--error-red);
+            color: white;
+        }
+
+        .feedback {
+            margin-top: 1.5rem;
+            min-height: 60px;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        .next-btn {
+            margin-top: 1.5rem;
+            background-color: var(--text-dark);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none;
+            width: 100%;
+        }
+
+        #result-screen { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-screen">
+    <div class="progress" id="progress">Aufgabe 1 / 8</div>
+    <h2>Wort-Duo-Check</h2>
+    <p>Wähle das passende Adjektiv für die Lücke:</p>
+
+    <div class="duo-display">
+        <span id="word-pre">три</span>
+        <span class="gap" id="gap">...</span>
+        <span id="word-post">подруги</span>
+    </div>
+
+    <div class="options-grid" id="options">
+        <!-- Buttons werden hier geladen -->
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Nächste Aufgabe</button>
+</div>
+
+<div class="container" id="result-screen">
+    <h2>Hervorragend!</h2>
+    <p id="final-score" style="font-size: 1.4rem;"></p>
+    <button class="next-btn" style="display:block" onclick="location.reload()">Neustart</button>
+</div>
+
+<script>
+    const questions = [
+        { pre: "три", post: "подруги", options: ["лучшие", "лучших", "лучшая"], correct: 0, rule: "Weiblich nach 3: Adjektiv im Nominativ Plural." },
+        { pre: "два", post: "уроka", options: ["интересных", "интересные", "интересный"], correct: 0, rule: "Männlich nach 2: Adjektiv im Genitiv Plural." },
+        { pre: "пять", post: "заданий", options: ["сложных", "сложные", "сложное"], correct: 0, rule: "Sächlich nach 5: Adjektiv im Genitiv Plural." },
+        { pre: "одна", post: "книга", options: ["интересная", "интересные", "интересных"], correct: 0, rule: "Nach „одна“: Nominativ Singular." },
+        { pre: "двадцать один", post: "дом", options: ["новый", "новых", "новые"], correct: 0, rule: "Zahl endet auf 1: Nominativ Singular." },
+        { pre: "две", post: "книги", options: ["интересные", "интересных", "интересная"], correct: 0, rule: "Weiblich nach 2: Adjektiv im Nominativ Plural." },
+        { pre: "одиннадцать", post: "улиц", options: ["широких", "широкие", "широкая"], correct: 0, rule: "Die Zahl 11 verlangt den Genitiv Plural." },
+        { pre: "четыре", post: "статьи", options: ["длинные", "длинных", "длинная"], correct: 0, rule: "Weiblich nach 4: Adjektiv im Nominativ Plural." }
+    ];
+
+    let current = 0;
+    let score = 0;
+    let answered = false;
+
+    function loadQuestion() {
+        answered = false;
+        const q = questions[current];
+        document.getElementById("progress").innerText = `Aufgabe ${current + 1} / ${questions.length}`;
+        document.getElementById("word-pre").innerText = q.pre;
+        document.getElementById("word-post").innerText = q.post;
+        document.getElementById("gap").innerText = "...";
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("next-btn").style.display = "none";
+
+        const optionsContainer = document.getElementById("options");
+        optionsContainer.innerHTML = "";
+
+        // Optionen mischen für den Lerneffekt
+        const shuffledOptions = q.options
+            .map((text, index) => ({ text, isCorrect: index === q.correct }))
+            .sort(() => Math.random() - 0.5);
+
+        shuffledOptions.forEach(opt => {
+            const btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.innerText = opt.text;
+            btn.onclick = () => checkAnswer(opt, btn);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(opt, btn) {
+        if (answered) return;
+        answered = true;
+
+        const q = questions[current];
+        const buttons = document.querySelectorAll(".option-btn");
+        const gap = document.getElementById("gap");
+
+        if (opt.isCorrect) {
+            score++;
+            btn.classList.add("correct");
+            gap.innerText = opt.text;
+            document.getElementById("feedback").innerHTML = `<span style="color:var(--success-green)">Richtig!</span><br><small>${q.rule}</small>`;
+        } else {
+            btn.classList.add("wrong");
+            // Richtigen Button markieren
+            buttons.forEach(b => {
+                const correctText = q.options[q.correct];
+                if (b.innerText === correctText) b.classList.add("correct");
+            });
+            document.getElementById("feedback").innerHTML = `<span style="color:var(--error-red)">Falsch.</span><br><small>${q.rule}</small>`;
+        }
+
+        buttons.forEach(b => b.disabled = true);
+        document.getElementById("next-btn").style.display = "block";
+    }
+
+    function nextQuestion() {
+        current++;
+        if (current < questions.length) {
+            loadQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function showFinal() {
+        document.getElementById("quiz-screen").style.display = "none";
+        document.getElementById("result-screen").style.display = "block";
+        document.getElementById("final-score").innerText = `Ergebnis: ${score} von ${questions.length} richtig.`;
+    }
+
+    initQuestion = loadQuestion;
+    initQuestion();
+</script>
+
+</body>
+</html>
