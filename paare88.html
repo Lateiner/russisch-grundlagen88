@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Paare finden (Verschwinden-Modus)</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f7;
+            --text-color: #2c3e50;
+            --primary-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --border-color: #d1d8e0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stats {
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .matching-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .match-item {
+            background: #fff;
+            border: 2px solid var(--border-color);
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            font-weight: bold;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            font-size: 1rem;
+            opacity: 1;
+        }
+
+        .match-item:hover:not(.locked) {
+            border-color: var(--primary-color);
+            background-color: #f8fbff;
+        }
+
+        .match-item.selected {
+            border-color: var(--primary-color);
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .match-item.error {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+        }
+
+        /* Klasse zum Verschwinden lassen */
+        .match-item.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.8);
+        }
+
+        .match-item.solution-mode {
+            color: white;
+            border: none;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+
+        .btn-reset { background: #95a5a6; color: white; }
+        .btn-solution { background: #8e44ad; color: white; }
+
+        #final-msg {
+            display: none;
+            font-size: 1.5rem;
+            color: var(--success-color);
+            margin: 20px 0;
+        }
+
+        @media (max-width: 600px) {
+            .matching-grid { gap: 8px; }
+            .match-item { font-size: 0.85rem; padding: 8px; }
+            .container { padding: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 style="font-size: 1.5rem; margin-bottom: 5px;">Paare finden</h1>
+    <p style="color: #7f8c8d; margin-bottom: 10px;">Verbinde die Paare. Korrekte Paare verschwinden.</p>
+    
+    <div class="stats" id="stats">Gefunden: 0 / 8</div>
+
+    <div id="final-msg">Hervorragend! Alle Paare gefunden.</div>
+
+    <div class="matching-grid" id="grid">
+        <div class="column" id="left-col"></div>
+        <div class="column" id="right-col"></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-reset" onclick="location.reload()">Reset</button>
+        <button class="btn btn-solution" id="btn-sol" onclick="showSolution()">Lösung anzeigen</button>
+    </div>
+</div>
+
+<script>
+    const pairs = [
+        { id: 1, left: "1", right: "хороший друг", color: "#e74c3c" },
+        { id: 2, left: "2 (муж. род)", right: "интересных урока", color: "#3498db" },
+        { id: 3, left: "2 (жен. род)", right: "интересные книги", color: "#27ae60" },
+        { id: 4, left: "5", right: "больших музеев", color: "#f39c12" },
+        { id: 5, left: "11", right: "широких улиц", color: "#9b59b6" },
+        { id: 6, left: "21", right: "новый дом", color: "#1abc9c" },
+        { id: 7, left: "3 (ср. род)", right: "полезных задания", color: "#d35400" },
+        { id: 8, left: "4 (жен. род)", right: "длинные статьи", color: "#2c3e50" }
+    ];
+
+    let selectedLeft = null;
+    let selectedRight = null;
+    let solvedCount = 0;
+
+    function init() {
+        const leftCol = document.getElementById('left-col');
+        const rightCol = document.getElementById('right-col');
+
+        const leftItems = [...pairs].sort(() => Math.random() - 0.5);
+        const rightItems = [...pairs].sort(() => Math.random() - 0.5);
+
+        leftItems.forEach(p => createItem(p.left, p.id, leftCol, 'left'));
+        rightItems.forEach(p => createItem(p.right, p.id, rightCol, 'right'));
+    }
+
+    function createItem(text, id, container, side) {
+        const div = document.createElement('div');
+        div.className = 'match-item';
+        div.innerText = text;
+        div.dataset.id = id;
+        div.onclick = () => select(div, side);
+        container.appendChild(div);
+    }
+
+    function select(element, side) {
+        if (element.classList.contains('hidden')) return;
+
+        // Auswahl in der eigenen Spalte bereinigen
+        document.querySelectorAll(`#${side}-col .match-item`).forEach(i => i.classList.remove('selected', 'error'));
+        element.classList.add('selected');
+
+        if (side === 'left') selectedLeft = element;
+        else selectedRight = element;
+
+        if (selectedLeft && selectedRight) {
+            if (selectedLeft.dataset.id === selectedRight.dataset.id) {
+                // Treffer!
+                const l = selectedLeft;
+                const r = selectedRight;
+                setTimeout(() => {
+                    l.classList.add('hidden');
+                    r.classList.add('hidden');
+                }, 200);
+                
+                solvedCount++;
+                updateStats();
+                selectedLeft = null;
+                selectedRight = null;
+
+                if(solvedCount === pairs.length) {
+                    document.getElementById('final-msg').style.display = 'block';
+                    document.getElementById('grid').style.display = 'none';
+                }
+            } else {
+                // Kein Treffer
+                const l = selectedLeft;
+                const r = selectedRight;
+                l.classList.add('error');
+                r.classList.add('error');
+                selectedLeft = null;
+                selectedRight = null;
+                setTimeout(() => {
+                    l.classList.remove('error', 'selected');
+                    r.classList.remove('error', 'selected');
+                }, 500);
+            }
+        }
+    }
+
+    function updateStats() {
+        document.getElementById('stats').innerText = `Gefunden: ${solvedCount} / ${pairs.length}`;
+    }
+
+    function showSolution() {
+        const allItems = document.querySelectorAll('.match-item');
+        allItems.forEach(item => {
+            if (!item.classList.contains('hidden')) {
+                const pairData = pairs.find(p => p.id == item.dataset.id);
+                item.classList.add('solution-mode');
+                item.style.backgroundColor = pairData.color;
+                item.style.borderColor = "transparent";
+            }
+        });
+        document.getElementById('btn-sol').disabled = true;
+        document.getElementById('btn-sol').style.opacity = 0.5;
+    }
+
+    init();
+</script>
+
+</body>
+</html>
