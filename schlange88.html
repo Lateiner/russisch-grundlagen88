@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Wortschlangen bauen</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --primary: #2980b9;
+            --accent: #f39c12;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --solution: #8e44ad;
+            --text: #2c3e50;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+        .instruction { color: #7f8c8d; margin-bottom: 2rem; font-size: 0.95rem; }
+
+        .drop-zone {
+            min-height: 70px;
+            border: 2px dashed #cbd5e0;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background-color: #fff;
+        }
+
+        .word-pool {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+            padding: 15px;
+            background-color: #edf2f7;
+            border-radius: 12px;
+        }
+
+        .word-item {
+            background: white;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .drop-zone .word-item {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .correct-sequence .word-item {
+            border-color: var(--success) !important;
+            color: var(--success) !important;
+            background-color: #e8f8f0;
+        }
+
+        .feedback {
+            margin-top: 1rem;
+            font-weight: bold;
+            min-height: 50px;
+            line-height: 1.4;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .btn-check { background: var(--primary); color: white; }
+        .btn-reset { background: #95a5a6; color: white; }
+        .btn-solution { background: var(--solution); color: white; }
+        .btn-next { background: var(--text); color: white; display: none; }
+
+        .btn:active { transform: scale(0.98); }
+
+        @media (max-width: 480px) {
+            .word-item { font-size: 1rem; padding: 8px 14px; }
+            .container { padding: 1.2rem; }
+            .btn { flex-grow: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Wortschlangen bauen</h1>
+    <p class="instruction" id="progress">Bilde den korrekten Ausdruck (1 / 8)</p>
+
+    <div class="drop-zone" id="target-zone"></div>
+    <div class="word-pool" id="source-pool"></div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="controls">
+        <button class="btn btn-reset" id="reset-btn" onclick="resetCurrent()">Leeren</button>
+        <button class="btn btn-solution" id="sol-btn" onclick="showSolution()">Lösung</button>
+        <button class="btn btn-check" id="check-btn" onclick="checkAnswer()">Prüfen</button>
+        <button class="btn btn-next" id="next-btn" onclick="nextQuestion()">Nächste</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        { correct: ["два", "интересных", "урока"], hint: "Männlich nach 2: Adjektiv Genitiv Plural, Substantiv Genitiv Singular." },
+        { correct: ["одна", "хорошая", "подруга"], hint: "Weiblich nach 1: Alles im Nominativ Singular." },
+        { correct: ["пять", "больших", "музеев"], hint: "Regel 5-20: Alles im Genitiv Plural." },
+        { correct: ["две", "новые", "статьи"], hint: "Weiblich nach 2: Adjektiv Nominativ Plural, Substantiv Genitiv Singular." },
+        { correct: ["двадцать", "один", "новый", "дом"], hint: "Zahl endet auf 1: Nominativ Singular." },
+        { correct: ["три", "длинные", "улицы"], hint: "Weiblich nach 3: Adjektiv Nominativ Plural." },
+        { correct: ["четыре", "полезных", "задания"], hint: "Sächlich nach 4: Adjektiv Genitiv Plural." },
+        { correct: ["одиннадцать", "широких", "улиц"], hint: "11 gehört zur Gruppe 5-20: Genitiv Plural." }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+
+    function initQuestion() {
+        const q = questions[currentIdx];
+        document.getElementById("progress").innerText = `Bilde den korrekten Ausdruck (${currentIdx + 1} / ${questions.length})`;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("target-zone").innerHTML = "";
+        document.getElementById("target-zone").classList.remove("correct-sequence");
+        
+        // Buttons zurücksetzen
+        document.getElementById("next-btn").style.display = "none";
+        document.getElementById("check-btn").style.display = "inline-block";
+        document.getElementById("sol-btn").style.display = "inline-block";
+        document.getElementById("reset-btn").style.display = "inline-block";
+        
+        // Wörter mischen
+        const pool = [...q.correct].sort(() => Math.random() - 0.5);
+        const poolContainer = document.getElementById("source-pool");
+        poolContainer.innerHTML = "";
+
+        pool.forEach(word => {
+            const span = document.createElement("div");
+            span.className = "word-item";
+            span.innerText = word;
+            span.onclick = () => moveWord(span);
+            poolContainer.appendChild(span);
+        });
+    }
+
+    function moveWord(element) {
+        const target = document.getElementById("target-zone");
+        const source = document.getElementById("source-pool");
+        if (element.parentElement === source) {
+            target.appendChild(element);
+        } else {
+            source.appendChild(element);
+        }
+    }
+
+    function resetCurrent() {
+        const target = document.getElementById("target-zone");
+        const source = document.getElementById("source-pool");
+        Array.from(target.children).forEach(item => source.appendChild(item));
+        document.getElementById("feedback").innerText = "";
+    }
+
+    function showSolution() {
+        const q = questions[currentIdx];
+        const target = document.getElementById("target-zone");
+        const source = document.getElementById("source-pool");
+        
+        // Alle Wörter einsammeln
+        const allWords = [...Array.from(target.children), ...Array.from(source.children)];
+        target.innerHTML = "";
+        
+        // In der exakt richtigen Reihenfolge wieder einfügen
+        q.correct.forEach(wordText => {
+            const wordElem = allWords.find(el => el.innerText === wordText);
+            target.appendChild(wordElem);
+        });
+
+        document.getElementById("target-zone").classList.add("correct-sequence");
+        document.getElementById("feedback").innerHTML = `<span style="color:var(--solution)">Lösung angezeigt:</span><br><small>${q.hint}</small>`;
+        
+        // UI anpassen
+        finishStep();
+    }
+
+    function checkAnswer() {
+        const userSequence = Array.from(document.getElementById("target-zone").children).map(item => item.innerText);
+        const correctSequence = questions[currentIdx].correct;
+
+        if (userSequence.length < correctSequence.length) {
+            document.getElementById("feedback").innerText = "Der Ausdruck ist noch nicht vollständig.";
+            return;
+        }
+
+        if (JSON.stringify(userSequence) === JSON.stringify(correctSequence)) {
+            score++;
+            document.getElementById("target-zone").classList.add("correct-sequence");
+            document.getElementById("feedback").innerHTML = `<span style="color:var(--success)">Richtig!</span><br><small>${questions[currentIdx].hint}</small>`;
+            finishStep();
+        } else {
+            document.getElementById("feedback").innerText = "Leider falsch. Probiere es noch einmal!";
+            document.getElementById("feedback").style.color = "var(--error)";
+        }
+    }
+
+    function finishStep() {
+        document.getElementById("check-btn").style.display = "none";
+        document.getElementById("sol-btn").style.display = "none";
+        document.getElementById("reset-btn").style.display = "none";
+        document.getElementById("next-btn").style.display = "inline-block";
+        // Klickbarkeit der Wörter aufheben
+        Array.from(document.querySelectorAll(".word-item")).forEach(el => el.onclick = null);
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            initQuestion();
+        } else {
+            showFinalResult();
+        }
+    }
+
+    function showFinalResult() {
+        document.querySelector(".container").innerHTML = `
+            <h1>Übung beendet!</h1>
+            <p style="font-size: 1.5rem; margin: 2rem 0;">Ergebnis: ${score} von ${questions.length}</p>
+            <button class="btn btn-check" onclick="location.reload()">Nochmal spielen</button>
+        `;
+    }
+
+    initQuestion();
+</script>
+
+</body>
+</html>
