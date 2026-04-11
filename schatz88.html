@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Grammatik: Schatzsuche</title>
+    <style>
+        :root {
+            --bg-color: #e2d1b3; /* Pergament-Ton */
+            --path-color: #f1c40f; /* Gold */
+            --stone-color: #95a5a6;
+            --water-color: #3498db;
+            --text-color: #2c3e50;
+            --error-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', serif;
+            background-color: #2c3e50;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-color);
+        }
+
+        .game-container {
+            width: 95%;
+            max-width: 650px;
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border: 5px solid #8e44ad;
+            position: relative;
+            text-align: center;
+        }
+
+        h1 { margin-top: 0; font-size: 1.5rem; }
+        .instruction { font-size: 0.9rem; margin-bottom: 15px; }
+
+        /* Das Gitter */
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin: 0 auto;
+            max-width: 500px;
+        }
+
+        .tile {
+            aspect-ratio: 1 / 1;
+            background-color: var(--stone-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            user-select: none;
+            box-shadow: inset 0 -4px rgba(0,0,0,0.2);
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .tile:hover:not(.active):not(.start) {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+
+        .tile.start {
+            background-color: #27ae60;
+            color: white;
+            cursor: default;
+        }
+
+        .tile.treasure {
+            background-color: #8e44ad;
+            color: white;
+        }
+
+        .tile.active {
+            background-color: var(--path-color);
+            color: black;
+            transform: scale(1.02);
+            box-shadow: 0 0 15px var(--path-color);
+            cursor: default;
+        }
+
+        .tile.wrong {
+            background-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s;
+        }
+
+        .tile.solution {
+            outline: 4px solid var(--path-color);
+            z-index: 2;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* UI-Buttons */
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        .btn-reset { background: #34495e; }
+        .btn-sol { background: #8e44ad; }
+
+        #msg { height: 30px; margin-top: 15px; font-weight: bold; }
+
+        @media (max-width: 450px) {
+            .tile { font-size: 0.6rem; padding: 2px; }
+            .map-grid { gap: 4px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>Grammatik-Schatzsuche</h1>
+    <p class="instruction">Finde den Pfad aus <b>korrekten</b> Ausdrücken bis zum Schatz (unten rechts). Start ist oben links.</p>
+
+    <div class="map-grid" id="map">
+        <!-- 25 Tiles -->
+    </div>
+
+    <div id="msg"></div>
+
+    <div class="controls">
+        <button class="btn btn-reset" onclick="location.reload()">Neustart</button>
+        <button class="btn btn-sol" onclick="showSolution()">Pfad zeigen</button>
+    </div>
+</div>
+
+<script>
+    // Definition des korrekten Pfades (Indices im 5x5 Grid)
+    // 0 -> 1 -> 6 -> 11 -> 12 -> 17 -> 22 -> 23 -> 24 (Treasure)
+    const correctPath = [0, 1, 6, 11, 12, 17, 22, 23, 24];
+
+    // Korrekte Phrasen für den Pfad
+    const pathPhrases = [
+        "один дом",           // 0
+        "две книги",          // 1
+        "два урока",          // 6
+        "пять музеев",        // 11
+        "три подруги",        // 12
+        "двадцать один дом",  // 17
+        "две новые книги",    // 22
+        "одиннадцать улиц",   // 23
+        "💰 SCHATZ"            // 24
+    ];
+
+    // Falsche Phrasen (Traps)
+    const traps = [
+        "пять музея", "два книги", "одиннадцать улицы", "три подруг", 
+        "одна книг", "два новые дома", "пять больших музея", "один окна",
+        "две новых книг", "три интересных урок", "пять новые книги",
+        "одна новые статьи", "двадцать один домов", "две хороших подруги",
+        "один задания", "три длинных пути"
+    ];
+
+    let currentStep = 0; // Wie viele Steine des Pfades wurden gefunden
+    let solved = false;
+
+    function initMap() {
+        const map = document.getElementById('map');
+        map.innerHTML = "";
+        
+        let trapCounter = 0;
+
+        for (let i = 0; i < 25; i++) {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.dataset.index = i;
+
+            // Ist dieser Index Teil des korrekten Pfades?
+            const pathIdx = correctPath.indexOf(i);
+            if (pathIdx !== -1) {
+                tile.innerText = pathPhrases[pathIdx];
+                tile.dataset.isCorrect = "true";
+                tile.dataset.order = pathIdx;
+            } else {
+                tile.innerText = traps[trapCounter % traps.length];
+                tile.dataset.isCorrect = "false";
+                trapCounter++;
+            }
+
+            // Startpunkt markieren
+            if (i === 0) {
+                tile.classList.add('start', 'active');
+                currentStep = 1;
+            }
+
+            tile.onclick = () => handleTileClick(tile);
+            map.appendChild(tile);
+        }
+    }
+
+    function handleTileClick(tile) {
+        if (solved) return;
+        const idx = parseInt(tile.dataset.index);
+        const isCorrect = tile.dataset.isCorrect === "true";
+        const order = parseInt(tile.dataset.order);
+
+        // Bereits aktiviert
+        if (tile.classList.contains('active')) return;
+
+        if (isCorrect) {
+            // Muss der nächste im Pfad sein (Angrenzung prüfen ist hier vereinfacht auf "die richtige Reihenfolge")
+            if (order === currentStep) {
+                tile.classList.add('active');
+                currentStep++;
+                document.getElementById('msg').innerText = "Gut! Weiter geht's...";
+                document.getElementById('msg').style.color = "var(--text-color)";
+
+                if (idx === 24) {
+                    win();
+                }
+            } else {
+                // Korrekte Phrase, aber nicht der nächste Schritt
+                document.getElementById('msg').innerText = "Diese Phrase ist richtig, aber nicht der nächste Stein!";
+                document.getElementById('msg').style.color = "orange";
+            }
+        } else {
+            // Falsche Phrase
+            tile.classList.add('wrong');
+            document.getElementById('msg').innerText = "Platsch! In die Falle getappt.";
+            document.getElementById('msg').style.color = "var(--error-color)";
+            setTimeout(() => tile.classList.remove('wrong'), 500);
+        }
+    }
+
+    function win() {
+        solved = true;
+        document.getElementById('msg').innerText = "GEWONNEN! Du hast den Schatz erreicht!";
+        document.getElementById('msg').style.color = "#27ae60";
+        document.querySelector('.tile.treasure').innerText = "🏆 GOLD!";
+    }
+
+    function showSolution() {
+        const tiles = document.querySelectorAll('.tile');
+        tiles.forEach(t => {
+            if (t.dataset.isCorrect === "true") {
+                t.classList.add('solution');
+            }
+        });
+        document.getElementById('msg').innerText = "Der goldene Pfad wurde markiert.";
+    }
+
+    initMap();
+</script>
+
+</body>
+</html>
