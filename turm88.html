@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Grammatik: Wort-Baustein-Turm</title>
+    <style>
+        :root {
+            --bg: #e0e4e8;
+            --tower-bg: #34495e;
+            --block-num: #3498db;
+            --block-adj: #f1c40f;
+            --block-noun: #e67e22;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --solution: #8e44ad;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 950px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        @media (min-width: 768px) {
+            .game-container { flex-direction: row-reverse; }
+        }
+
+        /* Baustein-Lager */
+        .warehouse {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .pool-section {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .pool-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .blocks-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .block {
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            user-select: none;
+            transition: all 0.2s;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .block:hover:not(:disabled) { transform: scale(1.05); filter: brightness(1.1); }
+        .block:disabled { opacity: 0.2; cursor: default; }
+        .block.selected { outline: 3px solid black; transform: scale(1.1); }
+        .block.used { display: none; }
+
+        .type-num { background-color: var(--block-num); }
+        .type-adj { background-color: var(--block-adj); color: var(--text); }
+        .type-noun { background-color: var(--block-noun); }
+
+        /* Turm-Bereich */
+        .tower-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column-reverse;
+            background: #f0f0f0;
+            border-bottom: 12px solid #7f8c8d;
+            border-radius: 10px;
+            min-height: 500px;
+            padding: 15px;
+            gap: 6px;
+            overflow-y: auto;
+        }
+
+        .tower-floor {
+            display: flex;
+            gap: 4px;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .floor-part {
+            flex: 1;
+            padding: 14px 5px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: white;
+            border-radius: 4px;
+            box-shadow: inset 0 -3px rgba(0,0,0,0.2);
+        }
+
+        /* Status & Feedback */
+        .status-bar {
+            text-align: center;
+            padding: 12px;
+            font-weight: bold;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            min-height: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .btn-ui {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        .btn-reset { background-color: var(--text); }
+        .btn-sol { background-color: var(--solution); }
+        
+        .error-shake { animation: shake 0.4s; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    
+    <div class="warehouse">
+        <h2 style="margin:0">Baustein-Turm</h2>
+        <div id="status" class="status-bar">Wähle eine ZAHL (blau)</div>
+
+        <div class="pool-section">
+            <span class="pool-title">1. Zahlen</span>
+            <div id="pool-num" class="blocks-grid"></div>
+        </div>
+        
+        <div class="pool-section">
+            <span class="pool-title">2. Adjektive</span>
+            <div id="pool-adj" class="blocks-grid"></div>
+        </div>
+
+        <div class="pool-section">
+            <span class="pool-title">3. Substantive</span>
+            <div id="pool-noun" class="blocks-grid"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-ui btn-reset" onclick="location.reload()">Reset</button>
+            <button class="btn-ui btn-sol" id="btn-sol-master" onclick="showAllSolutions()">Lösung zeigen</button>
+        </div>
+    </div>
+
+    <div class="tower-area" id="tower"></div>
+
+</div>
+
+<script>
+    const sets = [
+        { id: 1, num: "один", adj: "хороший", noun: "друг" },
+        { id: 2, num: "два", adj: "интересных", noun: "урока" },
+        { id: 3, num: "две", adj: "интересные", noun: "книги" },
+        { id: 4, num: "пять", adj: "больших", noun: "музеев" },
+        { id: 5, num: "одиннадцать", adj: "широких", noun: "улиц" },
+        { id: 6, num: "три", adj: "полезных", noun: "задания" },
+        { id: 7, num: "четыре", adj: "длинные", noun: "статьи" },
+        { id: 8, num: "двадцать один", adj: "новый", noun: "дом" },
+        { id: 9, num: "двадцать две", adj: "новые", noun: "книги" },
+        { id: 10, num: "десять", adj: "старых", noun: "зданий" }
+    ];
+
+    let currentStep = 'num'; 
+    let selection = { num: null, adj: null, noun: null };
+    let towerIds = new Set();
+
+    function initPools() {
+        renderPool('num', 'pool-num', 'type-num');
+        renderPool('adj', 'pool-adj', 'type-adj');
+        renderPool('noun', 'pool-noun', 'type-noun');
+        updateButtons();
+    }
+
+    function renderPool(type, containerId, cssClass) {
+        const container = document.getElementById(containerId);
+        const shuffled = [...sets].sort(() => Math.random() - 0.5);
+        
+        shuffled.forEach(item => {
+            const btn = document.createElement('button');
+            btn.className = `block ${cssClass}`;
+            btn.innerText = item[type];
+            btn.dataset.id = item.id;
+            btn.dataset.type = type;
+            btn.onclick = () => selectBlock(btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function selectBlock(btn) {
+        const type = btn.dataset.type;
+        if (type !== currentStep || btn.classList.contains('used')) return;
+
+        selection[type] = {
+            id: parseInt(btn.dataset.id),
+            text: btn.innerText,
+            element: btn
+        };
+
+        btn.classList.add('selected');
+
+        if (currentStep === 'num') {
+            currentStep = 'adj';
+            updateStatus("Wähle ein passendes ADJEKTIV (gelb)", "var(--block-adj)");
+        } else if (currentStep === 'adj') {
+            currentStep = 'noun';
+            updateStatus("Wähle ein passendes SUBSTANTIV (orange)", "var(--block-noun)");
+        } else {
+            checkSet();
+        }
+        updateButtons();
+    }
+
+    function updateStatus(text, color) {
+        const s = document.getElementById('status');
+        s.innerText = text;
+        s.style.backgroundColor = color || "transparent";
+        s.style.color = color ? "black" : "var(--text)";
+    }
+
+    function updateButtons() {
+        document.querySelectorAll('.block').forEach(btn => {
+            btn.disabled = btn.dataset.type !== currentStep || btn.classList.contains('used');
+        });
+    }
+
+    function checkSet() {
+        const status = document.getElementById('status');
+        if (selection.num.id === selection.adj.id && selection.adj.id === selection.noun.id) {
+            buildFloor(selection.num.id, selection.num.text, selection.adj.text, selection.noun.text);
+            markAsUsed(selection.num.id);
+            updateStatus("RICHTIG! +1 Etage", "var(--success)");
+            document.getElementById('status').style.color = "white";
+        } else {
+            updateStatus("Grammatik-Fehler!", "var(--error)");
+            document.getElementById('status').style.color = "white";
+            document.querySelector('.warehouse').classList.add('error-shake');
+            setTimeout(() => document.querySelector('.warehouse').classList.remove('error-shake'), 400);
+        }
+
+        setTimeout(() => {
+            resetSelection();
+            if (towerIds.size === sets.length) {
+                updateStatus("FERTIG! Der Turm steht!", "gold");
+            } else {
+                updateStatus("Wähle eine ZAHL (blau)", "");
+            }
+            updateButtons();
+        }, 1000);
+    }
+
+    function buildFloor(id, num, adj, noun) {
+        if (towerIds.has(id)) return;
+        const tower = document.getElementById('tower');
+        const floor = document.createElement('div');
+        floor.className = 'tower-floor';
+        floor.innerHTML = `
+            <div class="floor-part type-num">${num}</div>
+            <div class="floor-part type-adj">${adj}</div>
+            <div class="floor-part type-noun">${noun}</div>
+        `;
+        tower.appendChild(floor);
+        towerIds.add(id);
+    }
+
+    function markAsUsed(id) {
+        document.querySelectorAll(`.block[data-id="${id}"]`).forEach(b => {
+            b.classList.add('used');
+            b.classList.remove('selected');
+        });
+    }
+
+    function resetSelection() {
+        document.querySelectorAll('.block').forEach(b => b.classList.remove('selected'));
+        selection = { num: null, adj: null, noun: null };
+        currentStep = 'num';
+    }
+
+    function showAllSolutions() {
+        resetSelection();
+        sets.forEach(s => {
+            if (!towerIds.has(s.id)) {
+                buildFloor(s.id, s.num, s.adj, s.noun);
+                markAsUsed(s.id);
+            }
+        });
+        updateStatus("LÖSUNG ANGEZEIGT", "var(--solution)");
+        document.getElementById('status').style.color = "white";
+        document.getElementById('btn-sol-master').disabled = true;
+        document.getElementById('btn-sol-master').style.opacity = 0.5;
+        updateButtons();
+    }
+
+    initPools();
+</script>
+
+</body>
+</html>
