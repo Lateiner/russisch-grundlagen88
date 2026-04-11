@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Fehler-Detektiv (10 Aufgaben)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f5f6fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--primary);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress {
+            font-weight: bold;
+            color: #95a5a6;
+            margin-bottom: 1rem;
+        }
+
+        h1 { font-size: 1.5rem; margin-bottom: 10px; color: var(--primary); }
+        .instruction { color: #7f8c8d; margin-bottom: 25px; line-height: 1.4; }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #dcdde1;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            position: relative;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--accent);
+            background-color: #f0f7ff;
+        }
+
+        .option-btn.selected-wrong {
+            border-color: var(--success);
+            background-color: #e8f8f0;
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .option-btn.selected-correct {
+            border-color: var(--error);
+            background-color: #fdeaea;
+            color: var(--error);
+        }
+
+        .feedback {
+            min-height: 80px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            line-height: 1.5;
+            font-size: 1rem;
+        }
+
+        .btn-next {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 480px) {
+            .option-btn { font-size: 1rem; padding: 12px; }
+            .container { padding: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-ui">
+    <div class="progress" id="progress-text">Runde 1 / 10</div>
+    <h1>Fehler-Detektiv</h1>
+    <p class="instruction">In jeder Liste ist genau <b>ein</b> Ausdruck falsch. Tippe ihn an!</p>
+
+    <div class="options-list" id="options-container"></div>
+
+    <div class="feedback" id="feedback"></div>
+    <button class="btn-next" id="next-btn" onclick="nextQuestion()">Nächste Runde</button>
+</div>
+
+<div class="container" id="result-ui" style="display:none;">
+    <h1>Übung beendet!</h1>
+    <p id="final-score" style="font-size: 1.4rem; margin: 20px 0;"></p>
+    <button class="btn-next" style="display:block" onclick="location.reload()">Neustart</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            options: ["пять интересных уроков", "три хороших друга", "одна интересная книга", "двадцать одна новых книг", "две интересные книги"],
+            wrongIndex: 3,
+            explanation: "Falsch: 'двадцать одна новых книг'.<br>Regel: Zahlen auf 'один' verlangen Nominativ Singular (одна новая книга)."
+        },
+        {
+            options: ["две интересных книги", "одиннадцать широких улиц", "один хороший друг", "четыре длинные статьи", "пять больших музеев"],
+            wrongIndex: 0,
+            explanation: "Falsch: 'две интересных книги'.<br>Regel: Weiblich nach 2, 3, 4 -> Adjektiv im Nominativ Plural (интересные)."
+        },
+        {
+            options: ["двадцать два новых дома", "тридцать пять умных студентов", "три хороших подруги", "одно интересное задание", "сорок две neue статьи"],
+            wrongIndex: 2,
+            explanation: "Falsch: 'три хороших подруги'.<br>Regel: Weiblich nach 3 -> Adjektiv im Nominativ Plural (хорошие)."
+        },
+        {
+            options: ["пять новых заданий", "двадцать один новый музей", "четыре больших урока", "две новые библиотеки", "одиннадцать широкие улицы"],
+            wrongIndex: 4,
+            explanation: "Falsch: 'одиннадцать широкие улицы'.<br>Regel: 11 gehört zur Gruppe 5-20 -> Genitiv Plural (широких улиц)."
+        },
+        {
+            options: ["две новые статьи", "три полезных слова", "одно интересное задание", "пять больших окна", "двадцать одна интересная книга"],
+            wrongIndex: 3,
+            explanation: "Falsch: 'пять больших окна'.<br>Regel: Nach 5 steht auch das sächliche Substantiv im Genitiv Plural (окон)."
+        },
+        {
+            options: ["четыре большие дома", "два вкусных яблока", "тридцать один новый дом", "пять старых библиотек", "одна важная статья"],
+            wrongIndex: 0,
+            explanation: "Falsch: 'четыре большие дома'.<br>Regel: Männlich nach 4 -> Adjektiv im Genitiv Plural (больших)."
+        },
+        {
+            options: ["два новые слова", "три длинных пути", "двадцать одна полезная вещь", "четыре интересные книги", "десять умных людей"],
+            wrongIndex: 0,
+            explanation: "Falsch: 'два neue слова'.<br>Regel: Sächlich nach 2 -> Adjektiv im Genitiv Plural (новых)."
+        },
+        {
+            options: ["сорок один интересный урок", "двенадцать новых студентов", "четырнадцать новые статьи", "пять больших заданий", "три лучшие подруги"],
+            wrongIndex: 2,
+            explanation: "Falsch: 'четырнадцать новые статьи'.<br>Regel: 14 gehört zur Gruppe 5-20 -> Genitiv Plural (новых статей)."
+        },
+        {
+            options: ["тридцать две новых машины", "одна новая машина", "двадцать одна новая машина", "пять новых машин", "две новые машины"],
+            wrongIndex: 0,
+            explanation: "Falsch: 'тридцать две новых машины'.<br>Regel: Weiblich nach 32 (endet auf 2) -> Adjektiv im Nominativ Plural (новые)."
+        },
+        {
+            options: ["одно полезное слово", "одна интересные книги", "один новый друг", "двадцать один новый музей", "сорок одна длинная улица"],
+            wrongIndex: 1,
+            explanation: "Falsch: 'одна интересные книги'.<br>Regel: Nach 'одна' muss alles im Nominativ Singular stehen (интересная книга)."
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    function loadQuestion() {
+        answered = false;
+        const q = questions[currentIdx];
+        document.getElementById("progress-text").innerText = `Aufgabe ${currentIdx + 1} / ${questions.length}`;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("next-btn").style.display = "none";
+
+        const container = document.getElementById("options-container");
+        container.innerHTML = "";
+
+        q.options.forEach((text, index) => {
+            const btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.innerText = text;
+            btn.onclick = () => checkAnswer(index, btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(index, btn) {
+        if (answered) return;
+        answered = true;
+
+        const q = questions[currentIdx];
+        const buttons = document.querySelectorAll(".option-btn");
+
+        if (index === q.wrongIndex) {
+            score++;
+            btn.classList.add("selected-wrong");
+            document.getElementById("feedback").innerHTML = `<span style="color:var(--success)">Richtig! Fehler gefunden.</span><br>${q.explanation}`;
+        } else {
+            btn.classList.add("selected-correct");
+            buttons[q.wrongIndex].classList.add("selected-wrong");
+            document.getElementById("feedback").innerHTML = `<span style="color:var(--error)">Leider falsch.</span><br>${q.explanation}`;
+        }
+
+        buttons.forEach(b => b.disabled = true);
+        document.getElementById("next-btn").style.display = "block";
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            loadQuestion();
+        } else {
+            document.getElementById("quiz-ui").style.display = "none";
+            document.getElementById("result-ui").style.display = "block";
+            document.getElementById("final-score").innerText = `Du hast ${score} von ${questions.length} Fehlern entdeckt!`;
+        }
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
