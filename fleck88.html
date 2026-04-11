@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Hotspot Genitiv Plural</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f7;
+            --card-bg: #ffffff;
+            --primary-blue: #3498db;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --text-dark: #2c3e50;
+            --gray: #95a5a6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .instruction {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            color: var(--text-dark);
+        }
+
+        .progress {
+            font-weight: bold;
+            color: var(--gray);
+            margin-bottom: 1rem;
+        }
+
+        /* Satz-Display */
+        .sentence-display {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 2rem;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            line-height: 2.5;
+        }
+
+        .word-token {
+            font-size: 1.4rem;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            user-select: none;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .word-token:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .word-token.correct {
+            background-color: var(--success-green);
+            color: white;
+            border-color: var(--success-green);
+        }
+
+        .word-token.wrong {
+            background-color: var(--error-red);
+            color: white;
+            border-color: var(--error-red);
+        }
+
+        .feedback-area {
+            min-height: 80px;
+            margin-bottom: 1.5rem;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .btn-next { background: var(--text-dark); color: white; display: none; }
+        .btn-sol { background: #8e44ad; color: white; }
+
+        @media (max-width: 500px) {
+            .word-token { font-size: 1.1rem; padding: 4px 8px; }
+            .app-container { padding: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="progress" id="progress">Satz 1 / 8</div>
+    <div class="instruction">Tippe alle Wörter an, die im <b>Genitiv Plural</b> stehen.</div>
+
+    <div class="sentence-display" id="sentence-box"></div>
+
+    <div class="feedback-area" id="feedback"></div>
+
+    <div class="controls">
+        <button class="btn btn-sol" id="btn-sol" onclick="showAllTargets()">Lösung zeigen</button>
+        <button class="btn btn-next" id="btn-next" onclick="nextQuestion()">Nächster Satz</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            sentence: "В этом музее есть пять интересных уроков.",
+            targets: ["интересных", "уроков"],
+            explanation: "Nach „пять“ stehen Adjektiv und Substantiv im Genitiv Plural."
+        },
+        {
+            sentence: "У меня есть два интересных урока.",
+            targets: ["интересных"],
+            explanation: "Nach „два“ (männlich) steht nur das Adjektiv im Genitiv Plural. Das Substantiv „урока“ ist Genitiv Singular!"
+        },
+        {
+            sentence: "На столе лежат две интересные книги.",
+            targets: [],
+            explanation: "Kein Genitiv Plural! Nach „две“ (weiblich) steht das Adjektiv im Nominativ Plural."
+        },
+        {
+            sentence: "В нашем городе одиннадцать широких улиц.",
+            targets: ["широких", "улиц"],
+            explanation: "Die Zahl 11 verlangt den Genitiv Plural für Adjektiv und Substantiv."
+        },
+        {
+            sentence: "Я купил двадцать один новый дом.",
+            targets: [],
+            explanation: "Kein Genitiv Plural! Zahlen auf „один“ verlangen den Nominativ Singular."
+        },
+        {
+            sentence: "Учитель проверил тридцать сложных заданий.",
+            targets: ["сложных", "заданий"],
+            explanation: "Nach 30 stehen Adjektiv und Substantiv im Genitiv Plural."
+        },
+        {
+            sentence: "Три полезных слова помогут вам в пути.",
+            targets: ["полезных"],
+            explanation: "Nach „три“ (sächlich) steht das Adjektiv im Genitiv Plural, das Substantiv „слова“ aber im Genitiv Singular."
+        },
+        {
+            sentence: "В библиотеке есть восемь новых книг.",
+            targets: ["новых", "книг"],
+            explanation: "Nach 8 stehen Adjektiv und Substantiv im Genitiv Plural."
+        }
+    ];
+
+    let currentIdx = 0;
+    let foundTargets = [];
+    let finished = false;
+
+    function init() {
+        finished = false;
+        foundTargets = [];
+        const q = quizData[currentIdx];
+        document.getElementById("progress").innerText = `Satz ${currentIdx + 1} / ${quizData.length}`;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("btn-next").style.display = "none";
+        document.getElementById("btn-sol").disabled = false;
+        document.getElementById("btn-sol").style.opacity = "1";
+
+        const box = document.getElementById("sentence-box");
+        box.innerHTML = "";
+
+        // Satz in Wörter zerlegen (Satzzeichen entfernen für den Vergleich)
+        const words = q.sentence.split(" ");
+        words.forEach((word, index) => {
+            const span = document.createElement("span");
+            span.className = "word-token";
+            span.innerText = word;
+            
+            // Reines Wort ohne Punkt/Komma für den Abgleich
+            const cleanWord = word.replace(/[.,!]/g, "");
+            
+            span.onclick = () => handleWordClick(span, cleanWord);
+            box.appendChild(span);
+        });
+    }
+
+    function handleWordClick(element, word) {
+        if (finished) return;
+
+        const q = quizData[currentIdx];
+        if (q.targets.includes(word)) {
+            if (!element.classList.contains("correct")) {
+                element.classList.add("correct");
+                foundTargets.push(word);
+                checkCompletion();
+            }
+        } else {
+            element.classList.add("wrong");
+            document.getElementById("feedback").innerHTML = `<span style="color:var(--error-red)">„${word}“ ist nicht im Genitiv Plural.</span>`;
+            setTimeout(() => element.classList.remove("wrong"), 600);
+        }
+    }
+
+    function checkCompletion() {
+        const q = quizData[currentIdx];
+        // Einzigartige Ziele zählen
+        const uniqueTargets = [...new Set(q.targets)];
+        if (foundTargets.length >= uniqueTargets.length) {
+            document.getElementById("feedback").innerHTML = `<span style="color:var(--success-green)">Hervorragend!</span><br>${q.explanation}`;
+            finishStep();
+        }
+    }
+
+    function showAllTargets() {
+        const q = quizData[currentIdx];
+        const tokens = document.querySelectorAll(".word-token");
+        
+        tokens.forEach(token => {
+            const clean = token.innerText.replace(/[.,!]/g, "");
+            if (q.targets.includes(clean)) {
+                token.classList.add("correct");
+            }
+        });
+
+        document.getElementById("feedback").innerHTML = `<span style="color:#8e44ad">Lösung:</span><br>${q.explanation}`;
+        finishStep();
+    }
+
+    function finishStep() {
+        finished = true;
+        document.getElementById("btn-next").style.display = "inline-block";
+        document.getElementById("btn-sol").disabled = true;
+        document.getElementById("btn-sol").style.opacity = "0.5";
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < quizData.length) {
+            init();
+        } else {
+            showFinalResult();
+        }
+    }
+
+    function showFinalResult() {
+        const container = document.querySelector(".app-container");
+        container.innerHTML = `
+            <h2>Übung beendet!</h2>
+            <p style="font-size: 1.2rem;">Du hast alle Sätze analysiert.</p>
+            <button class="btn btn-sol" onclick="location.reload()">Neustart</button>
+        `;
+    }
+
+    init();
+</script>
+
+</body>
+</html>
