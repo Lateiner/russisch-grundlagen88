@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: Grammatik-Körbe</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #2d3436;
+            --nom-sg: #3498db;
+            --gen-sg: #f1c40f;
+            --gen-pl: #e67e22;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; margin-bottom: 10px; }
+        .instruction { color: #636e72; margin-bottom: 20px; }
+
+        /* Bereich für die zu sortierenden Wörter */
+        .word-pile {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+            min-height: 100px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .word-card {
+            background: white;
+            border: 2px solid #dfe6e9;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .word-card.selected {
+            border-color: #2d3436;
+            background: #f1f2f6;
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Die Körbe */
+        .baskets-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .baskets-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .basket {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.2s;
+            border: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .basket:hover { transform: translateY(-5px); }
+
+        .basket h3 { margin-top: 0; font-size: 1rem; pointer-events: none; }
+        .basket .rule { font-size: 0.8rem; color: #636e72; margin-bottom: 15px; pointer-events: none; }
+
+        .basket-nom { border-color: var(--nom-sg); }
+        .basket-gen-sg { border-color: var(--gen-sg); }
+        .basket-gen-pl { border-color: var(--gen-pl); }
+
+        .basket-nom.active { background-color: #ebf5fb; }
+        .basket-gen-sg.active { background-color: #fef9e7; }
+        .basket-gen-pl.active { background-color: #fdf2e9; }
+
+        .basket-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .word-tag {
+            font-size: 0.9rem;
+            background: #eee;
+            padding: 3px 8px;
+            border-radius: 5px;
+        }
+
+        .feedback {
+            margin: 20px 0;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        .btn {
+            background: #2d3436;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 5px;
+        }
+
+        .btn-solution { background-color: #8e44ad; }
+        
+        #result-screen { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-screen">
+    <h1>Grammatik-Körbe</h1>
+    <p class="instruction">Wähle ein Wort und klicke dann auf den richtigen Korb.</p>
+
+    <div class="word-pile" id="word-pile">
+        <!-- Wörter werden hier geladen -->
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="baskets-grid">
+        <div class="basket basket-nom" onclick="assignToBasket('nom')">
+            <h3>Nominativ Singular</h3>
+            <span class="rule">(nach: один)</span>
+            <div class="basket-content" id="basket-nom"></div>
+        </div>
+        <div class="basket basket-gen-sg" onclick="assignToBasket('gen-sg')">
+            <h3>Genitiv Singular</h3>
+            <span class="rule">(nach: два, три, четыре)</span>
+            <div class="basket-content" id="basket-gen-sg"></div>
+        </div>
+        <div class="basket basket-gen-pl" onclick="assignToBasket('gen-pl')">
+            <h3>Genitiv Plural</h3>
+            <span class="rule">(nach: пять - двадцать)</span>
+            <div class="basket-content" id="basket-gen-pl"></div>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <button class="btn btn-solution" id="sol-btn" onclick="showSolution()">Lösung anzeigen</button>
+        <button class="btn" onclick="location.reload()">Reset</button>
+    </div>
+</div>
+
+<div class="container" id="result-screen">
+    <h2>Super!</h2>
+    <p id="final-stats"></p>
+    <button class="btn" onclick="location.reload()">Nochmal spielen</button>
+</div>
+
+<script>
+    const data = [
+        { word: "дом", cat: "nom" },
+        { word: "дома", cat: "gen-sg" },
+        { word: "домов", cat: "gen-pl" },
+        { word: "книга", cat: "nom" },
+        { word: "книги", cat: "gen-sg" },
+        { word: "книг", cat: "gen-pl" },
+        { word: "задание", cat: "nom" },
+        { word: "задания", cat: "gen-sg" },
+        { word: "заданий", cat: "gen-pl" },
+        { word: "музей", cat: "nom" },
+        { word: "музея", cat: "gen-sg" },
+        { word: "музеев", cat: "gen-pl" }
+    ];
+
+    let currentSelectedWord = null;
+    let score = 0;
+    let totalAssigned = 0;
+    let pileWords = [];
+
+    function init() {
+        pileWords = [...data].sort(() => Math.random() - 0.5);
+        const pile = document.getElementById("word-pile");
+        pile.innerHTML = "";
+        
+        pileWords.forEach((item, index) => {
+            const div = document.createElement("div");
+            div.className = "word-card";
+            div.innerText = item.word;
+            div.id = "word-" + index;
+            div.onclick = (e) => selectWord(item, div, e);
+            pile.appendChild(div);
+        });
+    }
+
+    function selectWord(item, element, event) {
+        event.stopPropagation();
+        // Vorherige Selektion aufheben
+        const allCards = document.querySelectorAll(".word-card");
+        allCards.forEach(c => c.classList.remove("selected"));
+        
+        currentSelectedWord = { item, element };
+        element.classList.add("selected");
+        document.getElementById("feedback").innerText = "Sortiere '" + item.word + "' in einen Korb...";
+        document.getElementById("feedback").style.color = "var(--text-color)";
+    }
+
+    function assignToBasket(basketType) {
+        if (!currentSelectedWord) {
+            document.getElementById("feedback").innerText = "Wähle zuerst oben ein Wort aus!";
+            return;
+        }
+
+        const { item, element } = currentSelectedWord;
+        const feedback = document.getElementById("feedback");
+
+        if (item.cat === basketType) {
+            // Richtig
+            score++;
+            totalAssigned++;
+            feedback.innerText = "Richtig! '" + item.word + "' passt.";
+            feedback.style.color = "var(--success)";
+            
+            // Wort in Korb verschieben
+            const tag = document.createElement("span");
+            tag.className = "word-tag";
+            tag.innerText = item.word;
+            document.getElementById("basket-" + basketType).appendChild(tag);
+            element.style.display = "none";
+            currentSelectedWord = null;
+        } else {
+            // Falsch
+            feedback.innerText = "Nicht ganz. Überlege noch einmal!";
+            feedback.style.color = "var(--error)";
+            element.classList.remove("selected");
+            currentSelectedWord = null;
+        }
+
+        if (totalAssigned === data.length) {
+            showFinal();
+        }
+    }
+
+    function showSolution() {
+        // Alle verbleibenden Wörter im Pile finden
+        const pile = document.getElementById("word-pile");
+        const cards = pile.querySelectorAll(".word-card");
+        
+        cards.forEach(card => {
+            if (card.style.display !== "none") {
+                const wordText = card.innerText;
+                const item = data.find(d => d.word === wordText);
+                
+                const tag = document.createElement("span");
+                tag.className = "word-tag";
+                tag.style.opacity = "0.7";
+                tag.innerText = item.word;
+                document.getElementById("basket-" + item.cat).appendChild(tag);
+                card.style.display = "none";
+            }
+        });
+        
+        document.getElementById("feedback").innerText = "Lösung wurde eingeblendet.";
+        document.getElementById("sol-btn").style.display = "none";
+    }
+
+    function showFinal() {
+        document.getElementById("quiz-screen").style.display = "none";
+        document.getElementById("result-screen").style.display = "block";
+        document.getElementById("final-stats").innerText = "Du hast alle " + data.length + " Formen korrekt zugeordnet.";
+    }
+
+    init();
+</script>
+
+</body>
+</html>
