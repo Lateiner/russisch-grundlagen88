@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Übung: 10 Adjektiv-Lückenfüller</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --neutral: #95a5a6;
+            --bg: #f4f7f6;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress {
+            font-weight: bold;
+            color: var(--neutral);
+            margin-bottom: 1rem;
+        }
+
+        .sentence-box {
+            font-size: 1.4rem;
+            background: #fff;
+            padding: 25px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            line-height: 2.2;
+        }
+
+        .gap {
+            display: inline-block;
+            min-width: 130px;
+            height: 38px;
+            border-bottom: 3px solid var(--primary);
+            background: #f9f9f9;
+            vertical-align: middle;
+            margin: 0 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .gap.active { background: #e1f5fe; transform: scale(1.05); }
+        .gap.correct { border-color: var(--success); color: var(--success); background: #e8f8f0; }
+        .gap.wrong { border-color: var(--error); color: var(--error); background: #fdeaea; }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+            padding: 15px;
+            background: #fdfdfd;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+        }
+
+        .word-card {
+            background: white;
+            border: 2px solid var(--primary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: grab;
+            font-weight: bold;
+            color: var(--primary);
+            user-select: none;
+            transition: 0.2s;
+        }
+
+        .word-card.selected { background: var(--primary); color: white; }
+
+        .feedback {
+            min-height: 60px;
+            margin-bottom: 1rem;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .btn-check { background: var(--primary); color: white; }
+        .btn-sol { background: #8e44ad; color: white; }
+        .btn-next { background: var(--text); color: white; display: none; }
+        .btn-restart { background: var(--neutral); color: white; }
+
+        #final-screen { display: none; }
+
+        @media (max-width: 500px) {
+            .sentence-box { font-size: 1.1rem; padding: 15px; }
+            .gap { min-width: 100px; }
+            .word-card { font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-screen">
+    <div class="progress" id="progress">Frage 1 / 10</div>
+    
+    <div class="sentence-box" id="sentence-area">
+        <!-- Satz mit Lücke (...) -->
+    </div>
+
+    <div class="word-bank" id="word-bank">
+        <!-- Optionen -->
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="controls">
+        <button class="btn btn-sol" id="btn-sol" onclick="showSolution()">Lösung</button>
+        <button class="btn btn-check" id="btn-check" onclick="checkAnswer()">Prüfen</button>
+        <button class="btn btn-next" id="btn-next" onclick="nextQuestion()">Weiter</button>
+    </div>
+</div>
+
+<div class="container" id="final-screen">
+    <h1>Hervorragend!</h1>
+    <p style="font-size: 1.2rem;">Du hast alle 10 Übungen abgeschlossen.</p>
+    <div id="final-score" style="font-weight: bold; margin: 20px 0;"></div>
+    <button class="btn btn-restart" onclick="resetQuiz()">Neustart</button>
+</div>
+
+<script>
+    const data = [
+        { pre: "У меня есть один", post: "друг.", sol: "хороший", alt: ["хороших", "хорошие"], rule: "Nach „один“: Nominativ Singular." },
+        { pre: "У него есть две", post: "книги.", sol: "интересные", alt: ["интересных", "интересная"], rule: "Weiblich nach 2, 3, 4: Adjektiv im Nominativ Plural." },
+        { pre: "Мы видели два", post: "музея.", sol: "больших", alt: ["большие", "большой"], rule: "Männlich nach 2, 3, 4: Adjektiv im Genitiv Plural." },
+        { pre: "В классе есть пять", post: "студентов.", sol: "умных", alt: ["умные", "умный"], rule: "Nach 5–20: Adjektiv im Genitiv Plural." },
+        { pre: "Я делаю одно", post: "задание.", sol: "сложное", alt: ["сложных", "сложные"], rule: "Sächlich nach „одно“: Nominativ Singular." },
+        { pre: "Он читает три", post: "сообщения.", sol: "коротких", alt: ["короткие", "короткое"], rule: "Sächlich nach 2, 3, 4: Adjektiv im Genitiv Plural." },
+        { pre: "Там стоят четыре", post: "машины.", sol: "новые", alt: ["новых", "новая"], rule: "Weiblich nach 2, 3, 4: Adjektiv im Nominativ Plural." },
+        { pre: "Здесь одиннадцать", post: "улиц.", sol: "широких", alt: ["широкие", "широкая"], rule: "11 gehört zur Gruppe 5–20: Genitiv Plural." },
+        { pre: "Это двадцать один", post: "дом.", sol: "новый", alt: ["новых", "новые"], rule: "Zahl endet auf 1: Nominativ Singular." },
+        { pre: "Я знаю двадцать четыре", post: "библиотеки.", sol: "современные", alt: ["современных", "современная"], rule: "Weiblich nach 2, 3, 4: Adjektiv im Nominativ Plural." }
+    ];
+
+    let current = 0;
+    let score = 0;
+    let selectedText = null;
+    let currentInGap = null;
+
+    function init() {
+        const q = data[current];
+        document.getElementById("progress").innerText = `Aufgabe ${current + 1} / ${data.length}`;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("btn-next").style.display = "none";
+        document.getElementById("btn-check").style.display = "inline-block";
+        document.getElementById("btn-sol").style.display = "inline-block";
+
+        const area = document.getElementById("sentence-area");
+        area.innerHTML = `${q.pre} <span class="gap" id="gap" onclick="placeSelected()">...</span> ${q.post}`;
+
+        const bank = document.getElementById("word-bank");
+        bank.innerHTML = "";
+        const options = [q.sol, ...q.alt].sort(() => Math.random() - 0.5);
+        
+        options.forEach(text => {
+            const card = document.createElement("div");
+            card.className = "word-card";
+            card.innerText = text;
+            card.draggable = true;
+            card.onclick = () => selectCard(card);
+            card.ondragstart = (e) => { selectedText = text; };
+            bank.appendChild(card);
+        });
+
+        // Drag & Drop
+        const gap = document.getElementById("gap");
+        gap.ondragover = (e) => { e.preventDefault(); gap.classList.add("active"); };
+        gap.ondragleave = () => gap.classList.remove("active");
+        gap.ondrop = (e) => { e.preventDefault(); fillGap(selectedText); };
+
+        currentInGap = null;
+    }
+
+    function selectCard(card) {
+        document.querySelectorAll(".word-card").forEach(c => c.classList.remove("selected"));
+        card.classList.add("selected");
+        selectedText = card.innerText;
+    }
+
+    function placeSelected() {
+        if (selectedText) fillGap(selectedText);
+    }
+
+    function fillGap(text) {
+        const gap = document.getElementById("gap");
+        gap.innerText = text;
+        gap.classList.remove("active", "correct", "wrong");
+        currentInGap = text;
+    }
+
+    function checkAnswer() {
+        if (!currentInGap) {
+            document.getElementById("feedback").innerText = "Bitte wähle ein Wort aus!";
+            return;
+        }
+        const gap = document.getElementById("gap");
+        if (currentInGap === data[current].sol) {
+            gap.classList.add("correct");
+            document.getElementById("feedback").innerHTML = `<span style="color:var(--success)">Richtig!</span><br><small>${data[current].rule}</small>`;
+            score++;
+            finishStep();
+        } else {
+            gap.classList.add("wrong");
+            document.getElementById("feedback").innerHTML = `<span style="color:var(--error)">Leider falsch.</span>`;
+        }
+    }
+
+    function showSolution() {
+        const gap = document.getElementById("gap");
+        gap.innerText = data[current].sol;
+        gap.classList.add("correct");
+        document.getElementById("feedback").innerHTML = `<span style="color:#8e44ad">Lösung:</span><br><small>${data[current].rule}</small>`;
+        finishStep();
+    }
+
+    function finishStep() {
+        document.getElementById("btn-check").style.display = "none";
+        document.getElementById("btn-sol").style.display = "none";
+        document.getElementById("btn-next").style.display = "inline-block";
+        document.querySelectorAll(".word-card").forEach(c => c.onclick = null);
+    }
+
+    function nextQuestion() {
+        current++;
+        if (current < data.length) {
+            init();
+        } else {
+            document.getElementById("quiz-screen").style.display = "none";
+            document.getElementById("final-screen").style.display = "block";
+            document.getElementById("final-score").innerText = `Ergebnis: ${score} von ${data.length} korrekt.`;
+        }
+    }
+
+    function resetQuiz() {
+        current = 0;
+        score = 0;
+        document.getElementById("quiz-screen").style.display = "block";
+        document.getElementById("final-screen").style.display = "none";
+        init();
+    }
+
+    init();
+</script>
+
+</body>
+</html>
