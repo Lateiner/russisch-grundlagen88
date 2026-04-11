@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Grammatik: Rennspiel</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 95%;
+            max-width: 700px;
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            text-align: center;
+            position: relative;
+        }
+
+        /* Timer Balken */
+        .timer-container {
+            width: 100%;
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        #timer-bar {
+            width: 100%;
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.1s linear;
+        }
+
+        .score-board {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .target-phrase {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 1rem 0;
+            color: var(--primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .gap {
+            border-bottom: 4px solid var(--accent);
+            min-width: 150px;
+            color: var(--accent);
+        }
+
+        /* Tore (Buttons) */
+        .gates-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-top: 2rem;
+        }
+
+        @media (min-width: 500px) {
+            .gates-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .gate {
+            background: white;
+            border: 3px solid var(--accent);
+            padding: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--accent);
+        }
+
+        .gate:hover:not(:disabled) {
+            background: var(--accent);
+            color: white;
+            transform: translateY(-5px);
+        }
+
+        .gate.correct { background: var(--success); border-color: var(--success); color: white; }
+        .gate.wrong { background: var(--error); border-color: var(--error); color: white; }
+
+        .explanation {
+            margin-top: 1.5rem;
+            min-height: 50px;
+            font-size: 1rem;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        #start-screen, #result-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 20px;
+        }
+
+        .btn-main {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 480px) {
+            .target-phrase { font-size: 1.8rem; }
+            .gate { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <!-- Startbildschirm -->
+    <div id="start-screen">
+        <h1>Grammatik-Rennspiel</h1>
+        <p>Wähle das richtige Adjektiv-Tor,<br>bevor die Zeit abläuft!</p>
+        <button class="btn-main" onclick="startGame()">Spiel starten</button>
+    </div>
+
+    <!-- Ergebnisbildschirm -->
+    <div id="result-screen" style="display:none;">
+        <h1>Ziel erreicht!</h1>
+        <p id="final-score" style="font-size: 1.5rem;"></p>
+        <button class="btn-main" onclick="location.reload()">Nochmal spielen</button>
+    </div>
+
+    <!-- Spielbereich -->
+    <div class="timer-container">
+        <div id="timer-bar"></div>
+    </div>
+
+    <div class="score-board">Punkte: <span id="score">0</span> | Runde: <span id="round">1</span>/10</div>
+
+    <div class="target-phrase">
+        <span id="target-num">5</span>
+        <span class="gap" id="target-gap">...</span>
+        <span id="target-noun">уроков</span>
+    </div>
+
+    <div class="gates-container" id="gates">
+        <!-- Buttons werden hier erzeugt -->
+    </div>
+
+    <div class="explanation" id="explanation"></div>
+</div>
+
+<script>
+    const questions = [
+        { num: "5", noun: "уроков", options: ["интересных", "интересные", "интересный"], correct: 0, rule: "Regel 5-20: Alles im Genitiv Plural." },
+        { num: "один", noun: "урок", options: ["интересный", "интересных", "интересные"], correct: 0, rule: "Nach 'один': Nominativ Singular." },
+        { num: "две", noun: "книги", options: ["интересные", "интересных", "интересная"], correct: 0, rule: "Weiblich nach 2: Adjektiv im Nominativ Plural." },
+        { num: "два", noun: "урока", options: ["интересных", "интересные", "интересный"], correct: 0, rule: "Männlich nach 2: Adjektiv im Genitiv Plural." },
+        { num: "одна", noun: "книга", options: ["интересная", "интересные", "интересных"], correct: 0, rule: "Nach 'одна': Nominativ Singular." },
+        { num: "одиннадцать", noun: "улиц", options: ["широких", "широкие", "широкая"], correct: 0, rule: "11 gehört zur Gruppe 5-20: Genitiv Plural." },
+        { num: "три", noun: "подруги", options: ["лучшие", "лучших", "лучшая"], correct: 0, rule: "Weiblich nach 3: Adjektiv im Nominativ Plural." },
+        { num: "двадцать один", noun: "дом", options: ["новый", "новых", "новые"], correct: 0, rule: "Zahl endet auf 1: Nominativ Singular." },
+        { num: "три", noun: "задания", options: ["полезных", "полезные", "полезное"], correct: 0, rule: "Sächlich nach 3: Adjektiv im Genitiv Plural." },
+        { num: "четыре", noun: "статьи", options: ["длинные", "длинных", "длинная"], correct: 0, rule: "Weiblich nach 4: Adjektiv im Nominativ Plural." }
+    ];
+
+    let currentRound = 0;
+    let score = 0;
+    let timeLeft = 100;
+    let timerInterval;
+    let gameActive = false;
+
+    function startGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        gameActive = true;
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if (currentRound >= 10) {
+            endGame();
+            return;
+        }
+
+        const q = questions[currentRound];
+        document.getElementById('target-num').innerText = q.num;
+        document.getElementById('target-noun').innerText = q.noun;
+        document.getElementById('target-gap').innerText = "...";
+        document.getElementById('round').innerText = currentRound + 1;
+        document.getElementById('explanation').innerText = "";
+        
+        const gatesContainer = document.getElementById('gates');
+        gatesContainer.innerHTML = "";
+
+        // Tore mischen
+        const shuffledOptions = q.options
+            .map((opt, i) => ({ text: opt, isCorrect: i === q.correct }))
+            .sort(() => Math.random() - 0.5);
+
+        shuffledOptions.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'gate';
+            btn.innerText = opt.text;
+            btn.onclick = () => checkAnswer(opt, btn);
+            gatesContainer.appendChild(btn);
+        });
+
+        startTimer();
+    }
+
+    function startTimer() {
+        timeLeft = 100;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeLeft -= 1.25; // Entspricht ca. 8 Sekunden
+            document.getElementById('timer-bar').style.width = timeLeft + "%";
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                checkAnswer(null, null); // Zeit abgelaufen
+            }
+        }, 100);
+    }
+
+    function checkAnswer(selectedOpt, btn) {
+        clearInterval(timerInterval);
+        gameActive = false;
+        const q = questions[currentRound];
+        const allButtons = document.querySelectorAll('.gate');
+        
+        allButtons.forEach(b => b.disabled = true);
+
+        if (selectedOpt && selectedOpt.isCorrect) {
+            score += 10;
+            document.getElementById('score').innerText = score;
+            btn.classList.add('correct');
+            document.getElementById('target-gap').innerText = selectedOpt.text;
+            document.getElementById('explanation').innerText = "Richtig! " + q.rule;
+        } else {
+            if (btn) btn.classList.add('wrong');
+            // Richtige Lösung markieren
+            allButtons.forEach(b => {
+                if (b.innerText === q.options[q.correct]) b.classList.add('correct');
+            });
+            document.getElementById('explanation').innerText = selectedOpt === null ? "Zeit abgelaufen! " + q.rule : "Hoppla! " + q.rule;
+        }
+
+        currentRound++;
+        setTimeout(() => {
+            if (currentRound < 10) loadQuestion();
+            else endGame();
+        }, 2500);
+    }
+
+    function endGame() {
+        document.getElementById('result-screen').style.display = 'flex';
+        document.getElementById('final-score').innerText = `Deine Punktzahl: ${score} von 100`;
+    }
+</script>
+
+</body>
+</html>
