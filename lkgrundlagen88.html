@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernkartei</title>
+    <style>
+        :root {
+            --primary-green: #27ae60;
+            --light-green: #e8f8f0;
+            --dark-green: #1e8449;
+            --bg-color: #f4f7f6;
+            --text-color: #2c3e50;
+            --shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--dark-green);
+            margin-bottom: 5px;
+        }
+
+        .progress {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary-green);
+            margin-bottom: 15px;
+        }
+
+        /* Flashcard 3D Design */
+        .card-container {
+            perspective: 1000px;
+            width: 90%;
+            max-width: 500px;
+            height: 300px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card-container.is-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            border: 2px solid var(--light-green);
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: var(--light-green);
+        }
+
+        .card-text {
+            word-wrap: break-word;
+            max-width: 100%;
+            line-height: 1.4;
+            transition: font-size 0.2s;
+        }
+
+        .russian {
+            font-weight: bold;
+            font-size: 2.2rem;
+            color: #000;
+        }
+
+        .german {
+            font-size: 2rem;
+            color: var(--dark-green);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            max-width: 600px;
+        }
+
+        button {
+            background-color: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button:hover {
+            background-color: var(--dark-green);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background-color: var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #1a252f;
+        }
+
+        .keyboard-hint {
+            margin-top: 30px;
+            font-size: 0.85rem;
+            color: #95a5a6;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .card-container {
+                height: 250px;
+            }
+            .russian { font-size: 1.6rem; }
+            .german { font-size: 1.4rem; }
+            button {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Russisch-Vokabeln</h1>
+        <div class="progress" id="progress">1 / 74</div>
+    </header>
+
+    <div class="card-container" id="cardContainer" onclick="flipCard()">
+        <div class="card-inner" id="cardInner">
+            <div class="card-front">
+                <div class="card-text russian" id="frontText">Загрузка...</div>
+            </div>
+            <div class="card-back">
+                <div class="card-text german" id="backText">Laden...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="prevCard()">← Vorherige</button>
+        <button class="btn-secondary" onclick="goToStart()">An den Anfang</button>
+        <button class="btn-secondary" onclick="shuffleDeck()">Mischen</button>
+        <button onclick="nextCard()">Nächste →</button>
+    </div>
+
+    <div class="keyboard-hint">
+        Steuerung: Pfeiltasten (← →) | Umdrehen: Leertaste/Enter | Anfang: Pos1
+    </div>
+
+    <script>
+        const vocabRaw = `
+1.	друг – Freund
+2.	кни́га – Buch
+3.	зада́ние – Aufgabe
+4.	уро́к – Lektion / Unterrichtsstunde
+5.	подру́га – Freundin
+6.	дом – Haus
+7.	у́лица – Straße
+8.	зда́ние – Gebäude
+9.	музе́й – Museum
+10.	статья́ – Artikel
+11.	библиоте́ка – Bibliothek
+12.	сло́во – Wort
+13.	студе́нт – Student
+14.	сообще́ние – Nachricht
+15.	маши́на – Auto
+16.	окно́ – Fenster
+17.	сове́т – Rat / Ratschlag
+18.	путь – Weg / Pfad
+19.	я́блоко – Apfel
+20.	хоро́ший – gut
+21.	интере́сный – interessant
+22.	поле́зный – nützlich / hilfreich
+23.	лу́чший – bester
+24.	дли́нный – lang
+25.	большо́й – groß
+26.	широ́кий – breit / weit
+27.	совреме́нный – modern
+28.	но́вый – neu
+29.	коро́ткий – kurz
+30.	сло́жный – schwierig / kompliziert
+31.	ва́жный – wichtig
+32.	вку́сный – lecker
+33.	у́мный – klug / intelligent
+34.	ру́сский язы́к – die russische Sprache
+35.	кана́л – Kanal
+36.	иностра́нец – Ausländer
+37.	ви́део – Video
+38.	доска́ – Tafel
+39.	пра́вило – Regel
+40.	оди́н – eins
+41.	два – zwei
+42.	три – drei
+43.	четы́ре – vier
+44.	пять – fünf
+45.	оди́ннадцать – elf
+46.	два́дцать – zwanzig
+47.	со́рок – vierzig
+48.	сто – hundert
+49.	ты́сяча – tausend
+50.	миллио́н – eine Million
+51.	изуча́ть / изучи́ть – lernen / studieren
+52.	повторя́ть / повтори́ть – wiederholen
+53.	смотре́ть / посмотре́ть – schauen / ansehen
+54.	говори́ть / сказа́ть – sprechen / sagen
+55.	покупа́ть / купи́ть – kaufen
+56.	ви́деть / уви́деть – sehen
+57.	помога́ть / помо́чь – helfen
+58.	открыва́ть / откры́ть – öffnen
+59.	проверя́ть / прове́рить – prüfen / kontrollieren
+60.	понима́ть / поня́ть – verstehen
+61.	жела́ть / пожела́ть – wünschen
+62.	писа́ть / написа́ть – schreiben
+63.	числи́тельное – Zahlwort
+64.	прилага́тельное – Adjektiv
+65.	существи́тельное – Substantiv
+66.	роди́тельный паде́ж – Genitiv
+67.	имени́тельный паде́ж – Nominativ
+68.	еди́нственное число́ – Singular
+69.	мно́жественное число́ – Plural
+70.	мужско́й род – Maskulinum
+71.	женский род – Femininum
+72.	сре́дний род – Neutrum
+73.	И́ра – Ira
+74.	Москва́ – Moskau`;
+
+        // Parse vocabulary
+        let originalDeck = vocabRaw.trim().split('\n').map(line => {
+            const parts = line.split('\t');
+            const content = parts[1] ? parts[1] : parts[0].replace(/^\d+\.\t?/, '');
+            const [rus, deu] = content.split(' – ');
+            return { rus: rus.trim(), deu: deu.trim() };
+        });
+
+        let currentDeck = [...originalDeck];
+        let currentIndex = 0;
+        let isFlipped = false;
+
+        const cardContainer = document.getElementById('cardContainer');
+        const frontText = document.getElementById('frontText');
+        const backText = document.getElementById('backText');
+        const progress = document.getElementById('progress');
+
+        function updateUI() {
+            const card = currentDeck[currentIndex];
+            
+            // Reset flip state
+            isFlipped = false;
+            cardContainer.classList.remove('is-flipped');
+            
+            // Set texts
+            frontText.innerText = card.rus;
+            backText.innerText = card.deu;
+            
+            // Progress
+            progress.innerText = `${currentIndex + 1} / ${currentDeck.length}`;
+            
+            // Font size scaling
+            adjustFontSize(frontText, card.rus.length);
+            adjustFontSize(backText, card.deu.length);
+        }
+
+        function adjustFontSize(element, length) {
+            if (length > 30) {
+                element.style.fontSize = "1.2rem";
+            } else if (length > 20) {
+                element.style.fontSize = "1.5rem";
+            } else {
+                element.style.fontSize = element.classList.contains('russian') ? "2.2rem" : "2rem";
+            }
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            cardContainer.classList.toggle('is-flipped', isFlipped);
+        }
+
+        function nextCard() {
+            if (currentIndex < currentDeck.length - 1) {
+                currentIndex++;
+                updateUI();
+            }
+        }
+
+        function prevCard() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateUI();
+            }
+        }
+
+        function goToStart() {
+            currentIndex = 0;
+            updateUI();
+        }
+
+        function shuffleDeck() {
+            // Fisher-Yates Shuffle
+            for (let i = currentDeck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentDeck[i], currentDeck[j]] = [currentDeck[j], currentDeck[i]];
+            }
+            currentIndex = 0;
+            updateUI();
+        }
+
+        // Keyboard Controls
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowRight':
+                    nextCard();
+                    break;
+                case 'ArrowLeft':
+                    prevCard();
+                    break;
+                case ' ':
+                case 'Enter':
+                    e.preventDefault(); // Prevent scrolling with space
+                    flipCard();
+                    break;
+                case 'Home':
+                    goToStart();
+                    break;
+            }
+        });
+
+        // Initialize
+        updateUI();
+    </script>
+</body>
+</html>
