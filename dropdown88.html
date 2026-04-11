@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Grammatik: Interaktive Dropdown-Tabelle</title>
+    <style>
+        :root {
+            --primary: #34495e;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f5f6fa;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 850px;
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 { text-align: center; font-size: 1.5rem; margin-bottom: 5px; }
+        p.desc { text-align: center; color: #7f8c8d; margin-bottom: 25px; }
+
+        .grammar-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .grammar-table th {
+            background-color: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .grammar-table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            font-size: 1rem;
+            background-color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        select.correct { border: 2px solid var(--success); background-color: #e8f8f0; color: var(--success); font-weight: bold; }
+        select.wrong { border: 2px solid var(--error); background-color: #fdeaea; color: var(--error); }
+
+        .zahl-cell { font-weight: bold; color: #2980b9; }
+
+        /* Mobile Ansicht: Tabelle zu Karten umwandeln */
+        @media (max-width: 650px) {
+            .grammar-table thead { display: none; }
+            .grammar-table, .grammar-table tbody, .grammar-table tr, .grammar-table td {
+                display: block;
+                width: 100%;
+            }
+            .grammar-table tr {
+                margin-bottom: 20px;
+                border: 2px solid #eee;
+                border-radius: 12px;
+                padding: 10px;
+                background: #fdfdfd;
+            }
+            .grammar-table td {
+                border: none;
+                padding: 8px 0;
+                display: flex;
+                flex-direction: column;
+            }
+            .grammar-table td::before {
+                content: attr(data-label);
+                font-weight: bold;
+                font-size: 0.75rem;
+                color: #95a5a6;
+                text-transform: uppercase;
+                margin-bottom: 4px;
+            }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn-sol { background-color: #8e44ad; color: white; }
+        .btn-reset { background-color: var(--primary); color: white; }
+
+        #score-display {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 20px;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dropdown-Tabelle</h1>
+    <p class="desc">Wähle die richtigen Formen. Du erhältst sofort Feedback!</p>
+
+    <table class="grammar-table">
+        <thead>
+            <tr>
+                <th>Zahl</th>
+                <th>Adjektiv</th>
+                <th>Substantiv</th>
+            </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
+
+    <div id="score-display">Ergebnis: 0 / 14 richtig</div>
+
+    <div class="controls">
+        <button class="btn btn-reset" onclick="resetTable()">Neustart</button>
+        <button class="btn btn-sol" onclick="showSolution()">Lösung zeigen</button>
+    </div>
+</div>
+
+<script>
+    const tableData = [
+        { zahl: "один (м.р.)", adj: "интересный", noun: "урок", 
+          optAdj: ["интересный", "интересных", "интересные"], 
+          optNoun: ["урок", "урока", "уроков"] },
+        
+        { zahl: "две (ж.р.)", adj: "интересные", noun: "книги", 
+          optAdj: ["интересные", "интересных", "интересная"], 
+          optNoun: ["книги", "книг", "книга"] },
+        
+        { zahl: "два (м.р.)", adj: "интересных", noun: "урока", 
+          optAdj: ["интересных", "интересные", "интересный"], 
+          optNoun: ["урока", "уроков", "урок"] },
+        
+        { zahl: "пять", adj: "интересных", noun: "уроков", 
+          optAdj: ["интересных", "интересные", "интересный"], 
+          optNoun: ["уроков", "урока", "урок"] },
+        
+        { zahl: "одиннадцать", adj: "широких", noun: "улиц", 
+          optAdj: ["широких", "широкие", "широкая"], 
+          optNoun: ["улиц", "улицы", "улица"] },
+        
+        { zahl: "четыре (ж.р.)", adj: "длинные", noun: "статьи", 
+          optAdj: ["длинные", "длинных", "длинная"], 
+          optNoun: ["статьи", "статей", "статья"] },
+
+        { zahl: "двадцать один", adj: "новый", noun: "дом", 
+          optAdj: ["новый", "новых", "новые"], 
+          optNoun: ["дом", "дома", "домов"] }
+    ];
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initTable() {
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = "";
+        
+        tableData.forEach((row, index) => {
+            const tr = document.createElement('tr');
+            
+            // Zahl
+            tr.innerHTML += `<td data-label="Zahl" class="zahl-cell">${row.zahl}</td>`;
+            
+            // Adjektiv Dropdown (gemischt)
+            let adjOptions = `<option value="">-- ? --</option>`;
+            shuffle([...row.optAdj]).forEach(opt => adjOptions += `<option value="${opt}">${opt}</option>`);
+            tr.innerHTML += `<td data-label="Adjektiv"><select id="adj-${index}" onchange="validate(this, '${row.adj}')">${adjOptions}</select></td>`;
+            
+            // Substantiv Dropdown (gemischt)
+            let nounOptions = `<option value="">-- ? --</option>`;
+            shuffle([...row.optNoun]).forEach(opt => nounOptions += `<option value="${opt}">${opt}</option>`);
+            tr.innerHTML += `<td data-label="Substantiv"><select id="noun-${index}" onchange="validate(this, '${row.noun}')">${nounOptions}</select></td>`;
+            
+            tbody.appendChild(tr);
+        });
+        updateScore();
+    }
+
+    function validate(selectElement, correctAnswer) {
+        if (selectElement.value === "") {
+            selectElement.className = "";
+        } else if (selectElement.value === correctAnswer) {
+            selectElement.className = "correct";
+        } else {
+            selectElement.className = "wrong";
+        }
+        updateScore();
+    }
+
+    function updateScore() {
+        const selects = document.querySelectorAll('select');
+        let correctCount = 0;
+        selects.forEach(s => {
+            if (s.classList.contains('correct')) correctCount++;
+        });
+        document.getElementById('score-display').innerText = `Ergebnis: ${correctCount} / ${selects.length} richtig`;
+    }
+
+    function showSolution() {
+        tableData.forEach((row, index) => {
+            const adjSel = document.getElementById(`adj-${index}`);
+            const nounSel = document.getElementById(`noun-${index}`);
+            adjSel.value = row.adj;
+            nounSel.value = row.noun;
+            adjSel.className = "correct";
+            nounSel.className = "correct";
+        });
+        updateScore();
+    }
+
+    function resetTable() {
+        initTable();
+    }
+
+    // Start
+    initTable();
+</script>
+
+</body>
+</html>
